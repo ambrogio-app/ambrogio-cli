@@ -44,15 +44,15 @@ Il client usa una libreria mantenuta per decodificare il framing SSE del profilo
   * define: [Compatibilità con l'API conversazionale del backend](../Requirements/TerminalConversation.md#compatibilità-con-lapi-conversazionale-del-backend)
 ---
 
-### Menu numerico della conversazione
+### Schermata conversazionale a due pannelli
 
-L'interazione a prompt semplice presenta un menu numerico con le azioni per iniziare una conversazione, elencare quelle conservate, passare alla pagina successiva, aprire una conversazione, aggiornare manualmente la vista corrente e uscire. Dopo un'apertura o un nuovo turno, i successivi testi immessi nel contesto della conversazione proseguono usando il suo identificativo. Il client mostra quando un'azione non è disponibile, per esempio la pagina successiva senza cursore.
+Il client usa Terminal Kit per una schermata interattiva persistente. All'avvio una voce locale «Nuova chat» è selezionata come prima voce; non crea una conversazione vuota sul backend. Quando il primo turno è inviato, la voce prende come nome l'anteprima del testo inviato e resta la chat corrente anche durante la risposta. La barra laterale a sinistra mostra le conversazioni paginabili con l'anteprima del primo messaggio della persona, ricavata dagli storici HTTP pubblici delle sole chat visibili. Se il recupero di uno storico fallisce, la voce resta selezionabile con ID abbreviato. Il pannello destro conserva lo storico della chat selezionata, la risposta in generazione e il campo di scrittura per tutta l'interazione; inviare un turno non torna a una schermata di menu. `Tab` sposta il focus tra barra laterale e campo di scrittura; nell'elenco le frecce cambiano selezione e `Invio` apre la chat. La schermata indica i comandi per nuova chat, aggiornamento manuale, pagina successiva e uscita. Al ridimensionamento del terminale il client ricalcola i pannelli; quando lo spazio non consente due pannelli leggibili chiede di allargare il terminale senza perdere la conversazione corrente.
 
 #### Metadata
   * type: specification
 
 #### Relations
-  * define: [Client conversazionale nel terminale](../Requirements/TerminalConversation.md#client-conversazionale-nel-terminale)
+  * define: [Vista persistente della conversazione](../Requirements/TerminalConversation.md#vista-persistente-della-conversazione)
 ---
 
 ### Stati del turno testuale alla riapertura

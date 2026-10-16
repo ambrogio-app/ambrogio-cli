@@ -1,5 +1,19 @@
 # Elements
 
+### Anteprima delle conversazioni nella barra laterale
+
+Quando il client mostra una pagina dell'elenco conversazioni, deve presentare per ogni conversazione visibile un'anteprima del primo messaggio della persona ottenuta dallo storico HTTP pubblico; se uno storico non è disponibile, deve mantenere selezionabile la conversazione mostrando un identificativo abbreviato.
+
+#### Metadata
+  * type: requirement
+
+#### Contract References
+  * [Schermata conversazionale a due pannelli](../Contracts/TerminalConversation.md#schermata-conversazionale-a-due-pannelli)
+
+#### Relations
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
 ### Client conversazionale nel terminale
 
 Ambrogio deve fornire alla famiglia un client di chat testuale utilizzabile dal terminale, collegato al backend tramite le API HTTP conversazionali del prodotto.
@@ -9,8 +23,10 @@ Ambrogio deve fornire alla famiglia un client di chat testuale utilizzabile dal 
 
 #### Contract References
   * [Contratto HTTP del backend Ambrogio](../Contracts/TerminalConversation.md#contratto-http-del-backend-ambrogio)
+  * [Schermata conversazionale a due pannelli](../Contracts/TerminalConversation.md#schermata-conversazionale-a-due-pannelli)
 
 #### Relations
+  * satisfiedBy: [cli.ts](../../src/cli.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -22,6 +38,7 @@ Quando il client terminale comunica con il backend Ambrogio, deve usare il contr
   * type: requirement
 
 #### Relations
+  * satisfiedBy: [backend.ts](../../src/backend.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -33,6 +50,7 @@ Quando la famiglia invia un turno testuale da un client della chat testuale, il 
   * type: requirement
 
 #### Relations
+  * satisfiedBy: [backend.ts](../../src/backend.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -45,6 +63,35 @@ Quando una conversazione riaperta nel client della chat testuale mostra un turno
 
 #### Contract References
   * [Stati del turno testuale alla riapertura](../Contracts/TerminalConversation.md#stati-del-turno-testuale-alla-riapertura)
+
+#### Relations
+  * satisfiedBy: [cli.ts](../../src/cli.ts)
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
+### Navigazione della chat nella schermata persistente
+
+Quando la persona passa all'elenco o apre una conversazione, il client deve consentire di scegliere una chat con la tastiera e mostrarne lo storico nel pannello destro, mantenendo disponibile il campo di scrittura per continuare quella chat senza tornare a un menu.
+
+#### Metadata
+  * type: requirement
+
+#### Contract References
+  * [Schermata conversazionale a due pannelli](../Contracts/TerminalConversation.md#schermata-conversazionale-a-due-pannelli)
+
+#### Relations
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
+### Nuova chat iniziale nella barra laterale
+
+All'avvio del client, il client deve aprire una nuova chat locale come conversazione corrente e mostrarla come prima voce della barra laterale; dopo l'invio del primo messaggio, deve usare l'anteprima di quel messaggio come nome della voce e continuare a mostrare la stessa chat nel pannello destro.
+
+#### Metadata
+  * type: requirement
+
+#### Contract References
+  * [Schermata conversazionale a due pannelli](../Contracts/TerminalConversation.md#schermata-conversazionale-a-due-pannelli)
 
 #### Relations
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
@@ -61,6 +108,7 @@ Quando il client della chat testuale riceve una risposta HTTP di errore in forma
   * [Contratto HTTP del backend Ambrogio](../Contracts/TerminalConversation.md#contratto-http-del-backend-ambrogio)
 
 #### Relations
+  * satisfiedBy: [cli.ts](../../src/cli.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -75,6 +123,19 @@ Quando il client della chat testuale riceve una parte `error` del profilo di tra
   * [Contratto HTTP del backend Ambrogio](../Contracts/TerminalConversation.md#contratto-http-del-backend-ambrogio)
 
 #### Relations
+  * satisfiedBy: [cli.ts](../../src/cli.ts)
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
+### Repository autonomo del client terminale
+
+Il client terminale deve essere sviluppato e versionato nel repository `ambrogio-cli`, con workspace Reqvire canonico alla propria radice e decisioni tecniche del client registrate nel proprio modello.
+
+#### Metadata
+  * type: requirement
+
+#### Relations
+  * satisfiedBy: [README.md](../../README.md)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -89,6 +150,7 @@ Quando il flusso di un turno della chat testuale termina, il client deve conside
   * [Contratto HTTP del backend Ambrogio](../Contracts/TerminalConversation.md#contratto-http-del-backend-ambrogio)
 
 #### Relations
+  * satisfiedBy: [backend.ts](../../src/backend.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -104,6 +166,7 @@ Quando il flusso di un turno della chat testuale termina senza la conferma di su
 
 #### Relations
   * derivedFrom: [Riconoscimento del completamento della risposta testuale](#riconoscimento-del-completamento-della-risposta-testuale)
+  * satisfiedBy: [cli.ts](../../src/cli.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -115,6 +178,22 @@ Quando il client della chat testuale aggiorna l'elenco delle conversazioni conse
   * type: requirement
 
 #### Relations
+  * satisfiedBy: [cli.ts](../../src/cli.ts)
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
+### Stack del client terminale
+
+Il client terminale deve essere implementato in TypeScript per Node.js e offrire una schermata conversazionale persistente a due pannelli mediante Terminal Kit.
+
+#### Metadata
+  * type: requirement
+
+#### Contract References
+  * [Schermata conversazionale a due pannelli](../Contracts/TerminalConversation.md#schermata-conversazionale-a-due-pannelli)
+
+#### Relations
+  * satisfiedBy: [package.json](../../package.json)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -126,23 +205,13 @@ Quando la famiglia consulta tramite un client della chat testuale una conversazi
   * type: requirement
 
 #### Relations
+  * satisfiedBy: [cli.ts](../../src/cli.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
-### Stack del client terminale
+### Vista persistente della conversazione
 
-Il client terminale deve essere implementato in TypeScript per Node.js e offrire alla famiglia un'interazione testuale a prompt semplice.
-
-#### Metadata
-  * type: requirement
-
-#### Relations
-  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
----
-
-### Repository autonomo del client terminale
-
-Il client terminale deve essere sviluppato e versionato nel repository `ambrogio-cli`, con workspace Reqvire canonico alla propria radice e decisioni tecniche del client registrate nel proprio modello.
+Quando il client è attivo in un terminale interattivo, deve mostrare l'elenco delle conversazioni a sinistra e la conversazione corrente a destra, mantenendo visibili la conversazione e il campo di scrittura mentre la persona compone, invia e riceve un turno.
 
 #### Metadata
   * type: requirement

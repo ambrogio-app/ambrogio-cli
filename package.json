@@ -10,10 +10,12 @@
     "test:backend": "npm run build && node scripts/verify-pinned-backend.mjs"
   },
   "dependencies": {
-    "eventsource-parser": "^3.0.0"
+    "eventsource-parser": "^3.0.0",
+    "terminal-kit": "^3.1.4"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "@types/terminal-kit": "^2.5.7",
     "typescript": "^5.9.0"
   }
 }
