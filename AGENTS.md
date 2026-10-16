@@ -1,0 +1,11 @@
+# Istruzioni per gli agenti
+
+Questo repository contiene esclusivamente il client conversazionale da terminale di Ambrogio. Il suo workspace Reqvire canonico è la radice di questo repository; il modello è in `system-model/`. Il backend e il contratto HTTP pubblico sono posseduti dal repository separato `ambrogio-app`.
+
+Prima di lavorare, controllare `git rev-parse --show-toplevel`, branch e `reqvire --workspace "$PWD" submodels` e, se disponibile, `reqvire.workspace_status` via MCP, per evitare di modificare il modello del repository sbagliato. Avviare l'MCP di questo repository su una porta distinta da quello del server; la configurazione locale usa `http://127.0.0.1:8083/mcp`. Ogni istanza Reqvire vede soltanto il proprio modello; versioni, contratti e prove di integrazione sono il collegamento fra i repository.
+
+Prima di introdurre una scelta tecnica o architetturale nuova, presentare alternative e conseguenze, concordare la decisione con la persona e registrarla nel modello prima del codice. Le decisioni già prese non richiedono nuova conferma. Per nuove capacità o modifiche funzionali seguire: capability, concetti e ontologie se utili, requisiti, contratti, contratti semantici se necessari, verifiche, test e implementazione, validazione e revisione. Leggere requisiti, contratti e verifiche prima di cambiare il comportamento pubblico.
+
+Usare la documentazione ufficiale di Reqvire su https://reqvire.org/ come riferimento autorevole e verificare i comandi disponibili nella versione installata. Preferire MCP per l'authoring e CLI per i controlli ripetibili. Non modificare direttamente il modello mentre un server MCP con mutazioni ne possiede lo snapshot. Eseguire almeno `validate`, `lint`, `coverage` e `change-impact` sulle modifiche significative e interpretare i risultati; il collegamento a un test non ne certifica il successo.
+
+Quando il protocollo del backend cambia, aggiornare il riferimento alla versione compatibile in `system-model/Contracts/TerminalConversation.md` e ripetere le prove di integrazione. Valutare l'impatto su sito e documentazione utente nei rispettivi repository esterni. Al termine, riportare modifiche, controlli e attività ancora aperte.
