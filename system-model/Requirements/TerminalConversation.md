@@ -11,6 +11,7 @@ Quando il client mostra una pagina dell'elenco conversazioni, deve presentare pe
   * [Schermata conversazionale a due pannelli](../Contracts/TerminalConversation.md#schermata-conversazionale-a-due-pannelli)
 
 #### Relations
+  * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -27,6 +28,7 @@ Ambrogio deve fornire alla famiglia un client di chat testuale utilizzabile dal 
 
 #### Relations
   * satisfiedBy: [cli.ts](../../src/cli.ts)
+  * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -65,7 +67,7 @@ Quando una conversazione riaperta nel client della chat testuale mostra un turno
   * [Stati del turno testuale alla riapertura](../Contracts/TerminalConversation.md#stati-del-turno-testuale-alla-riapertura)
 
 #### Relations
-  * satisfiedBy: [cli.ts](../../src/cli.ts)
+  * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -80,6 +82,7 @@ Quando la persona passa all'elenco o apre una conversazione, il client deve cons
   * [Schermata conversazionale a due pannelli](../Contracts/TerminalConversation.md#schermata-conversazionale-a-due-pannelli)
 
 #### Relations
+  * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -94,6 +97,7 @@ All'avvio del client, il client deve aprire una nuova chat locale come conversaz
   * [Schermata conversazionale a due pannelli](../Contracts/TerminalConversation.md#schermata-conversazionale-a-due-pannelli)
 
 #### Relations
+  * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -108,7 +112,7 @@ Quando il client della chat testuale riceve una risposta HTTP di errore in forma
   * [Contratto HTTP del backend Ambrogio](../Contracts/TerminalConversation.md#contratto-http-del-backend-ambrogio)
 
 #### Relations
-  * satisfiedBy: [cli.ts](../../src/cli.ts)
+  * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -123,7 +127,7 @@ Quando il client della chat testuale riceve una parte `error` del profilo di tra
   * [Contratto HTTP del backend Ambrogio](../Contracts/TerminalConversation.md#contratto-http-del-backend-ambrogio)
 
 #### Relations
-  * satisfiedBy: [cli.ts](../../src/cli.ts)
+  * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -166,7 +170,7 @@ Quando il flusso di un turno della chat testuale termina senza la conferma di su
 
 #### Relations
   * derivedFrom: [Riconoscimento del completamento della risposta testuale](#riconoscimento-del-completamento-della-risposta-testuale)
-  * satisfiedBy: [cli.ts](../../src/cli.ts)
+  * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -178,7 +182,7 @@ Quando il client della chat testuale aggiorna l'elenco delle conversazioni conse
   * type: requirement
 
 #### Relations
-  * satisfiedBy: [cli.ts](../../src/cli.ts)
+  * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -205,7 +209,7 @@ Quando la famiglia consulta tramite un client della chat testuale una conversazi
   * type: requirement
 
 #### Relations
-  * satisfiedBy: [cli.ts](../../src/cli.ts)
+  * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -217,5 +221,6 @@ Quando il client è attivo in un terminale interattivo, deve mostrare l'elenco d
   * type: requirement
 
 #### Relations
+  * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
