@@ -1,6 +1,6 @@
 # ambrogio-cli
 
-Client conversazionale da terminale per Ambrogio. Questo repository possiede il modello Reqvire e le decisioni tecniche del client; il backend risiede in [`ambrogio-app`](https://github.com/adrianofoschi/ambrogio-app) e possiede il contratto HTTP pubblico.
+Client conversazionale da terminale per Ambrogio. Questo repository possiede il modello Reqvire e le decisioni tecniche del client; il backend risiede in [`ambrogio-backend`](https://github.com/adrianofoschi/ambrogio-backend) e possiede il contratto HTTP pubblico.
 
 ## Stato
 
@@ -27,7 +27,7 @@ npm test
 npm run test:backend
 ```
 
-`npm test` usa un server HTTP locale e una pseudo console (`script`, da util-linux) per verificare protocollo e schermata interattiva. `npm run test:backend` esercita prima gli adapter HTTP reali e poi il processo server completo del repository `ambrogio-app` al commit `3f789c61815ca82eed87a67c91304fb1e6123805`. Avvia la CLI in un processo separato, usa un archivio SQLite temporaneo e un produttore di risposta controllato; verifica nuova chat, riapertura dalla barra laterale, prosecuzione, errore conservato e passaggio da `pending` ad `answered`. Per questa prova, il checkout backend deve essere al commit indicato, avere le dipendenze installate ed essere già compilato; per impostazione predefinita si trova in `../ambrogio-app`, oppure nel percorso indicato da `AMBROGIO_BACKEND_REPO`. Il produttore reale basato su LLM e gli agenti MCP esterni non sono coinvolti in questi test automatici.
+`npm test` usa un server HTTP locale e una pseudo console (`script`, da util-linux) per verificare protocollo e schermata interattiva. `npm run test:backend` esercita prima gli adapter HTTP reali e poi il processo server completo del repository `ambrogio-backend` al commit `3f789c61815ca82eed87a67c91304fb1e6123805`. Avvia la CLI in un processo separato, usa un archivio SQLite temporaneo e un produttore di risposta controllato; verifica nuova chat, riapertura dalla barra laterale, prosecuzione, errore conservato e passaggio da `pending` ad `answered`. Per questa prova, il checkout backend deve essere al commit indicato, avere le dipendenze installate ed essere già compilato; per impostazione predefinita si trova in `../ambrogio-backend`, oppure nel percorso indicato da `AMBROGIO_BACKEND_REPO`. Il produttore reale basato su LLM e gli agenti MCP esterni non sono coinvolti in questi test automatici.
 
 ## Modello
 

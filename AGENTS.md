@@ -1,6 +1,6 @@
 # Istruzioni per gli agenti
 
-Questo repository contiene esclusivamente il client conversazionale da terminale di Ambrogio. Il suo workspace Reqvire canonico è la radice di questo repository; il modello è in `system-model/`. Il backend e il contratto HTTP pubblico sono posseduti dal repository separato `ambrogio-app`.
+Questo repository contiene esclusivamente il client conversazionale da terminale di Ambrogio. Il suo workspace Reqvire canonico è la radice di questo repository; il modello è in `system-model/`. Il backend e il contratto HTTP pubblico sono posseduti dal repository separato `ambrogio-backend`.
 
 Prima di lavorare, controllare `git rev-parse --show-toplevel`, branch e `reqvire --workspace "$PWD" submodels` e, se disponibile, `reqvire.workspace_status` via MCP, per evitare di modificare il modello del repository sbagliato. Avviare l'MCP di questo repository su una porta distinta da quello del server; la configurazione locale usa `http://127.0.0.1:8083/mcp`. Ogni istanza Reqvire vede soltanto il proprio modello; versioni, contratti e prove di integrazione sono il collegamento fra i repository.
 
