@@ -1,0 +1,19 @@
+{
+  "name": "ambrogio-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/src/cli.js",
+    "test": "npm run build && node --test dist/test/*.test.js",
+    "test:backend": "npm run build && node scripts/verify-pinned-backend.mjs"
+  },
+  "dependencies": {
+    "eventsource-parser": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}
