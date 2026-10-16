@@ -10,7 +10,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const cli = fileURLToPath(new URL('..', import.meta.url));
 const root = resolve(process.env.AMBROGIO_BACKEND_REPO ?? resolve(cli, '../ambrogio-backend'));
-const expectedCommit = '3f789c61815ca82eed87a67c91304fb1e6123805';
+const expectedCommit = 'c057ced962b37f7d605c675ffb6da44825d67496';
 const actualCommit = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 assert.equal(actualCommit, expectedCommit, 'Il backend locale deve essere al commit dichiarato nel contratto del client.');
 const require = createRequire(`${root}/packages/conversations/package.json`);
