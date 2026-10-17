@@ -10,10 +10,10 @@ Raggruppa le prove del comportamento del client terminale e della sua integrazio
 
 ### Analisi della compatibilità con il backend
 
-Esaminare la versione di backend dichiarata nel contratto sorgente e confrontare richieste, eventi SSE, errori, elenco e storico usati dal client con il contratto pubblico e con l'esito delle prove di integrazione.
+Esaminare la revisione di backend dichiarata nel contratto sorgente e confrontare i messaggi `ambrogio.v1` inviati e interpretati dal client, gli esiti e i rifiuti, l'elenco e lo storico con i contratti pubblici e lo schema del protocollo a quella revisione, e con l'esito delle prove di integrazione.
 
 #### Details
-L'analisi passa se la versione è identificata in modo riproducibile e tutti gli usi del protocollo corrispondono ai contratti e alle prove eseguite. Fallisce se la versione è indefinita o il client dipende da file o moduli interni del backend.
+L'analisi passa se la revisione è identificata in modo riproducibile e tutti gli usi del protocollo e delle rotte HTTP corrispondono ai contratti, allo schema e alle prove eseguite. Fallisce se la revisione è indefinita, se il client usa ancora il profilo SSE rimosso o se dipende da file o moduli interni del backend.
 
 #### Metadata
   * type: analysis-verification
@@ -41,10 +41,10 @@ Il controllo passa se il repository e il modello Reqvire sono autonomi dal backe
 
 ### Prova del client conversazionale nel terminale
 
-Avviare il backend e il client terminale come processi distinti, rendendo disponibili al client le sole API HTTP del backend. Dal terminale inviare un nuovo turno e osservare una risposta prodotta in più frammenti; consultare le conversazioni conservate e proseguire quella creata, recuperandone lo storico dal backend. Ripetere con un rifiuto HTTP e con un errore successivo all'avvio del flusso.
+Avviare il backend e il client terminale come processi distinti, rendendo disponibili al client soltanto il canale conversazionale `ambrogio.v1` e le API HTTP pubbliche del backend. Dal terminale inviare un nuovo turno e osservare una risposta prodotta in più frammenti; consultare le conversazioni conservate e proseguire quella creata, recuperandone lo storico dal backend. Ripetere con un turno rifiutato, per esempio la continuazione di una conversazione occupata, con un errore dopo l'ammissione a risposta già iniziata e con la chiusura della sessione prima dell'esito.
 
 #### Details
-La prova passa se la persona può conversare dal terminale, osserva i frammenti durante la generazione e può consultare e continuare una conversazione conservata tramite le API pubbliche. La conferma di successo segue il profilo UI Message Stream e gli errori sono presentati secondo i contratti condivisi. Fallisce se il client richiede un'interfaccia grafica, accede direttamente all'archivio o ai componenti server, oppure presenta come riuscito un turno privo della conferma applicativa. I test del client, inclusa la schermata PTY, la prova HTTP contro gli adapter e la prova con server completo, archivio SQLite e CLI in un processo separato sono passati con un produttore di risposta controllato. Un turno reale con Mistral è riuscito tramite il client in processo separato e il backend Docker al commit 3f789c6, avviato con Compose e JSON esterni; lo storico SQLite ha conservato lo stato answered. Restano da provare gli agenti MCP esterni e l'intero scenario con più frammenti, riapertura, continuazione ed errori contro il produttore reale.
+La prova passa se la persona può conversare dal terminale, osserva i frammenti durante la generazione e può consultare e continuare una conversazione conservata tramite le interfacce pubbliche. Il turno risulta riuscito soltanto con `turn.completed`; `turn.rejected` e `turn.failed` mostrano il loro messaggio pubblico al posto dei frammenti; la chiusura della sessione o `turn.interrupted` mostrano «Risposta interrotta». Fallisce se il client richiede un'interfaccia grafica, accede direttamente all'archivio o ai componenti server, usa il profilo SSE rimosso, oppure presenta come riuscito un turno privo di `turn.completed`. Gli esiti registrati in precedenza per il profilo SSE non valgono per questa versione della prova; le evidenze vanno raccolte di nuovo contro la revisione di backend dichiarata.
 
 #### Metadata
   * type: test-verification
@@ -55,19 +55,34 @@ La prova passa se la persona può conversare dal terminale, osserva i frammenti 
   * satisfiedBy: [backend.test.ts](../../test/backend.test.ts)
   * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
   * verify: [Client conversazionale nel terminale](../Requirements/TerminalConversation.md#client-conversazionale-nel-terminale)
-  * verify: [Invio HTTP del turno della chat testuale](../Requirements/TerminalConversation.md#invio-http-del-turno-della-chat-testuale)
-  * verify: [Presentazione dell'errore del flusso testuale](../Requirements/TerminalConversation.md#presentazione-dellerrore-del-flusso-testuale)
-  * verify: [Presentazione dell'errore HTTP prima del flusso testuale](../Requirements/TerminalConversation.md#presentazione-dellerrore-http-prima-del-flusso-testuale)
+  * verify: [Invio del turno sul canale conversazionale](../Requirements/TerminalConversation.md#invio-del-turno-sul-canale-conversazionale)
+  * verify: [Presentazione del rifiuto del turno](../Requirements/TerminalConversation.md#presentazione-del-rifiuto-del-turno)
+  * verify: [Presentazione dell'errore dopo l'ammissione](../Requirements/TerminalConversation.md#presentazione-dellerrore-dopo-lammissione)
   * verify: [Riconoscimento del completamento della risposta testuale](../Requirements/TerminalConversation.md#riconoscimento-del-completamento-della-risposta-testuale)
   * verify: [Segnalazione locale dell'interruzione della chat testuale](../Requirements/TerminalConversation.md#segnalazione-locale-dellinterruzione-della-chat-testuale)
 ---
 
-### Prova dell'invito ad aggiornare la conversazione
+### Prova dell'identità del client nella sessione
 
-Avviare un turno testuale con elaborazione controllabile, disconnettere il client e riaprire la stessa conversazione mentre il turno è ancora in corso. Osservare il client, far conservare al backend l'esito e aggiornare manualmente la consultazione. Ripetere con una risposta completa e con un errore pubblico.
+Avviare il client contro un backend controllato senza configurazione dell'identità, poi con `AMBROGIO_CLIENT_ID`, poi con `--client-id` insieme alla variabile; inviare un turno in ciascun caso e osservare `session.hello`. Provare anche un valore vuoto.
 
 #### Details
-La prova passa se la conversazione riaperta mostra il turno «In elaborazione» e invita la persona ad aggiornarla più tardi, senza aprire un altro flusso SSE, interrogare periodicamente lo stato o mostrare frammenti temporanei come risposta completa. Prima dell'aggiornamento manuale il client non sostituisce da sé lo stato; dopo l'aggiornamento mostra l'esito conservato corretto senza duplicare il turno né inviarne uno nuovo. Il test PTY verifica la riapertura con stato pending, l'invito visibile e la transizione ad answered dopo Ctrl+R senza un nuovo POST. La prova con il server completo conferma lo stato pending nell'archivio e l'esito answered alla nuova consultazione, oltre a un errore conservato distinto. Restano da provare la disconnessione reale durante il turno e la transizione pending verso failed alla riapertura.
+La prova passa se senza configurazione il `clientId` è `cli-<nome host>` e il `name` è `Terminale <nome host>`, se la variabile sostituisce il valore predefinito e l'opzione prevale sulla variabile, e se un valore vuoto impedisce l'avvio con un'indicazione d'uso. Fallisce se il `clientId` cambia tra avvii con la stessa configurazione o se il client apre una sessione con un identificativo vuoto.
+
+#### Metadata
+  * type: test-verification
+
+#### Relations
+  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
+  * verify: [Identificazione del client terminale nella sessione](../Requirements/TerminalConversation.md#identificazione-del-client-terminale-nella-sessione)
+---
+
+### Prova dell'invito ad aggiornare la conversazione
+
+Avviare un turno testuale con elaborazione controllabile, chiudere la sessione del client e riaprire la stessa conversazione mentre il turno è ancora in corso. Osservare il client, far conservare al backend l'esito e aggiornare manualmente la consultazione. Ripetere con una risposta completa e con un errore pubblico.
+
+#### Details
+La prova passa se la conversazione riaperta mostra il turno «In elaborazione» e invita la persona ad aggiornarla più tardi, senza riprendere le trasmissioni del turno, interrogare periodicamente lo stato o mostrare frammenti temporanei come risposta completa. Prima dell'aggiornamento manuale il client non sostituisce da sé lo stato; dopo l'aggiornamento mostra l'esito conservato corretto senza duplicare il turno né inviarne uno nuovo. Gli esiti registrati in precedenza per il profilo SSE non valgono per questa versione della prova.
 
 #### Metadata
   * type: test-verification
@@ -116,10 +131,10 @@ La prova passa se la chat e il campo di scrittura restano visibili durante compo
 
 ### Prova dello stato del turno alla riapertura
 
-Avviare da un client della chat testuale un turno con elaborazione controllabile, poi disconnettere il client dopo l'accettazione e prima dell'esito. Mantenere l'elaborazione in corso, riaprire la stessa conversazione da un client della chat testuale e osservare lo stato del turno. Far poi terminare il turno, consultare nuovamente la conversazione e ripetere la prova con un esito di errore.
+Avviare da un client della chat testuale un turno con elaborazione controllabile, poi chiudere la sessione del client dopo l'accettazione e prima dell'esito. Mantenere l'elaborazione in corso, riaprire la stessa conversazione da un client della chat testuale e osservare lo stato del turno. Far poi terminare il turno, consultare nuovamente la conversazione e ripetere la prova con un esito di errore.
 
 #### Details
-La prova passa se, durante l'elaborazione, il client mostra il testo del turno con lo stato «In elaborazione» e non presenta eventuali frammenti ricevuti prima della disconnessione come risposta completa. Dopo la conservazione dell'esito e una nuova consultazione manuale, il client mostra un solo scambio concluso con risposta completa oppure messaggio pubblico di errore, e lo stato «In elaborazione» scompare per quel turno. Fallisce se il turno non è visibile durante l'elaborazione, se appare già concluso, se lo stato rimane dopo la nuova consultazione o se la riapertura crea uno scambio duplicato. Il test PTY verifica la riapertura mentre il turno è pending e la visualizzazione della risposta conservata dopo Ctrl+R, senza nuovo POST. La prova con server completo verifica anche riapertura e continuazione. La prova con il server completo conferma la transizione pending verso answered e un errore failed conservato. Restano da provare la disconnessione reale, la riapertura durante una transizione pending verso failed e il recupero dopo riavvio.
+La prova passa se, durante l'elaborazione, il client mostra il testo del turno con lo stato «In elaborazione» e non presenta eventuali frammenti ricevuti prima della chiusura della sessione come risposta completa. Dopo la conservazione dell'esito e una nuova consultazione manuale, il client mostra un solo scambio concluso con risposta completa oppure messaggio pubblico di errore, e lo stato «In elaborazione» scompare per quel turno. Fallisce se il turno non è visibile durante l'elaborazione, se appare già concluso, se lo stato rimane dopo la nuova consultazione, se la riapertura crea uno scambio duplicato o se l'aggiornamento invia un nuovo turno. Gli esiti registrati in precedenza per il profilo SSE non valgono per questa versione della prova.
 
 #### Metadata
   * type: test-verification
@@ -129,3 +144,4 @@ La prova passa se, durante l'elaborazione, il client mostra il testo del turno c
   * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
   * verify: [Stato del turno in elaborazione alla riapertura](../Requirements/TerminalConversation.md#stato-del-turno-in-elaborazione-alla-riapertura)
 ---
+

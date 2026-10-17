@@ -17,13 +17,13 @@ Quando il client mostra una pagina dell'elenco conversazioni, deve presentare pe
 
 ### Client conversazionale nel terminale
 
-Ambrogio deve fornire alla famiglia un client di chat testuale utilizzabile dal terminale, collegato al backend tramite le API HTTP conversazionali del prodotto.
+Ambrogio deve fornire alla famiglia un client di chat testuale utilizzabile dal terminale, collegato al backend tramite il protocollo conversazionale `ambrogio.v1` e le API HTTP pubbliche di consultazione.
 
 #### Metadata
   * type: requirement
 
 #### Contract References
-  * [Contratto HTTP del backend Ambrogio](../Contracts/TerminalConversation.md#contratto-http-del-backend-ambrogio)
+  * [Contratti pubblici del backend Ambrogio](../Contracts/TerminalConversation.md#contratti-pubblici-del-backend-ambrogio)
   * [Schermata conversazionale a due pannelli](../Contracts/TerminalConversation.md#schermata-conversazionale-a-due-pannelli)
 
 #### Relations
@@ -34,7 +34,7 @@ Ambrogio deve fornire alla famiglia un client di chat testuale utilizzabile dal 
 
 ### Compatibilità con l'API conversazionale del backend
 
-Quando il client terminale comunica con il backend Ambrogio, deve usare il contratto HTTP pubblico della versione di backend dichiarata come dipendenza, senza accedere ai file o ai moduli interni del server.
+Quando il client terminale comunica con il backend Ambrogio, deve usare il protocollo conversazionale e le API HTTP pubbliche della versione di backend dichiarata come dipendenza, senza accedere ai file o ai moduli interni del server.
 
 #### Metadata
   * type: requirement
@@ -44,12 +44,27 @@ Quando il client terminale comunica con il backend Ambrogio, deve usare il contr
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
-### Invio HTTP del turno della chat testuale
+### Identificazione del client terminale nella sessione
 
-Quando la famiglia invia un turno testuale da un client della chat testuale, il client deve trasmettere il turno al backend mediante una richiesta HTTP POST.
+Quando il client apre la sessione conversazionale, deve presentarsi al backend con un identificativo di client stabile e un nome leggibile, configurabili all'avvio e con un valore predefinito ricavato dalla macchina.
 
 #### Metadata
   * type: requirement
+
+#### Relations
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
+### Invio del turno sul canale conversazionale
+
+Quando la famiglia invia un turno testuale dal client terminale, il client deve trasmetterlo al backend come richiesta testuale del protocollo conversazionale `ambrogio.v1`, chiedendo la risposta in testo e indicando la conversazione corrente quando la continua.
+
+#### Metadata
+  * type: requirement
+
+#### Contract References
+  * [Contratti pubblici del backend Ambrogio](../Contracts/TerminalConversation.md#contratti-pubblici-del-backend-ambrogio)
+  * [Sessione ambrogio.v1 del client terminale](../Contracts/TerminalConversation.md#sessione-ambrogiov1-del-client-terminale)
 
 #### Relations
   * satisfiedBy: [backend.ts](../../src/backend.ts)
@@ -101,30 +116,30 @@ All'avvio del client, il client deve aprire una nuova chat locale come conversaz
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
-### Presentazione dell'errore HTTP prima del flusso testuale
+### Presentazione del rifiuto del turno
 
-Quando il client della chat testuale riceve una risposta HTTP di errore in formato JSON prima del flusso SSE, deve mostrare il messaggio pubblico contenuto nel campo `error` come esito di errore del turno nella chat.
+Quando il client terminale riceve `turn.rejected` per un turno, deve mostrare il messaggio pubblico contenuto in `message` come esito di errore del turno nella chat.
 
 #### Metadata
   * type: requirement
 
 #### Contract References
-  * [Contratto HTTP del backend Ambrogio](../Contracts/TerminalConversation.md#contratto-http-del-backend-ambrogio)
+  * [Contratti pubblici del backend Ambrogio](../Contracts/TerminalConversation.md#contratti-pubblici-del-backend-ambrogio)
 
 #### Relations
   * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
-### Presentazione dell'errore del flusso testuale
+### Presentazione dell'errore dopo l'ammissione
 
-Quando il client della chat testuale riceve una parte `error` del profilo di trasporto UI, deve mostrare il messaggio pubblico contenuto in `errorText` come esito di errore del turno nella conversazione, sostituendo gli eventuali frammenti di risposta già mostrati per quel turno.
+Quando il client terminale riceve `turn.failed` per un turno ammesso, deve mostrare il messaggio pubblico contenuto in `message` come esito di errore del turno nella conversazione, sostituendo gli eventuali frammenti di risposta già mostrati per quel turno.
 
 #### Metadata
   * type: requirement
 
 #### Contract References
-  * [Contratto HTTP del backend Ambrogio](../Contracts/TerminalConversation.md#contratto-http-del-backend-ambrogio)
+  * [Contratti pubblici del backend Ambrogio](../Contracts/TerminalConversation.md#contratti-pubblici-del-backend-ambrogio)
 
 #### Relations
   * satisfiedBy: [tui.ts](../../src/tui.ts)
@@ -145,13 +160,13 @@ Il client terminale deve essere sviluppato e versionato nel repository `ambrogio
 
 ### Riconoscimento del completamento della risposta testuale
 
-Quando il flusso di un turno della chat testuale termina, il client deve considerare la risposta completata correttamente soltanto se ha ricevuto la conferma di successo definita dal profilo di trasporto UI.
+Quando un turno della chat testuale si conclude, il client deve considerare la risposta completata correttamente soltanto se ha ricevuto `turn.completed` per quel turno.
 
 #### Metadata
   * type: requirement
 
 #### Contract References
-  * [Contratto HTTP del backend Ambrogio](../Contracts/TerminalConversation.md#contratto-http-del-backend-ambrogio)
+  * [Contratti pubblici del backend Ambrogio](../Contracts/TerminalConversation.md#contratti-pubblici-del-backend-ambrogio)
 
 #### Relations
   * satisfiedBy: [backend.ts](../../src/backend.ts)
@@ -160,13 +175,13 @@ Quando il flusso di un turno della chat testuale termina, il client deve conside
 
 ### Segnalazione locale dell'interruzione della chat testuale
 
-Quando il flusso di un turno della chat testuale termina senza la conferma di successo né una parte `error` definite dal profilo di trasporto UI, il client deve mostrare lo stato locale «Risposta interrotta» senza trasformare automaticamente la disconnessione in uno scambio di errore conservato.
+Quando la sessione conversazionale si chiude prima dell'esito di un turno, oppure il backend comunica `turn.interrupted`, il client deve mostrare lo stato locale «Risposta interrotta» senza trasformare automaticamente l'interruzione in uno scambio di errore conservato.
 
 #### Metadata
   * type: requirement
 
 #### Contract References
-  * [Contratto HTTP del backend Ambrogio](../Contracts/TerminalConversation.md#contratto-http-del-backend-ambrogio)
+  * [Contratti pubblici del backend Ambrogio](../Contracts/TerminalConversation.md#contratti-pubblici-del-backend-ambrogio)
 
 #### Relations
   * derivedFrom: [Riconoscimento del completamento della risposta testuale](#riconoscimento-del-completamento-della-risposta-testuale)
@@ -224,3 +239,4 @@ Quando il client è attivo in un terminale interattivo, deve mostrare l'elenco d
   * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
+
