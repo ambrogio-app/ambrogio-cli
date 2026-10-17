@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { createRequire } from 'node:module';
 import { execFileSync, spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -10,63 +9,21 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const cli = fileURLToPath(new URL('..', import.meta.url));
 const root = resolve(process.env.AMBROGIO_BACKEND_REPO ?? resolve(cli, '../ambrogio-backend'));
-const expectedCommit = 'c057ced962b37f7d605c675ffb6da44825d67496';
+const expectedCommit = 'f262e924f7fdaa6635c0f4486f5aec1aa484e0a3';
 const actualCommit = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 assert.equal(actualCommit, expectedCommit, 'Il backend locale deve essere al commit dichiarato nel contratto del client.');
-const require = createRequire(`${root}/packages/conversations/package.json`);
-const Fastify = require('fastify');
-const { registerTurnRoute } = await import(pathToFileURL(`${root}/packages/conversations/dist/adapters/in/http/turn-route.js`));
-const { registerListRoute } = await import(pathToFileURL(`${root}/packages/conversations/dist/adapters/in/http/list-route.js`));
-const { registerHistoryRoute } = await import(pathToFileURL(`${root}/packages/conversations/dist/adapters/in/http/history-route.js`));
-const { httpAjvOptions } = await import(pathToFileURL(`${root}/packages/conversations/dist/adapters/in/http/http-validation.js`));
 const { startConversationServer } = await import(pathToFileURL(`${root}/apps/server/dist/runtime/conversation-server.js`));
-const { AmbrogioBackend, backendUrl, PublicHttpError } = await import(pathToFileURL(`${cli}/dist/src/backend.js`));
-
-const server = Fastify({ ajv: { customOptions: httpAjvOptions } });
-let sequence = 0;
-registerTurnRoute(server, { language: 'it', exchange: async (input, observer) => {
-  if (input.text === 'occupato') return { ok: false, error: { kind: 'occupied' } };
-  sequence += 1;
-  observer.admitted('11111111-1111-4111-8111-111111111111', `turn-${sequence}`);
-  observer.delta('Ciao ');
-  observer.delta('dal backend');
-  if (input.text === 'errore') return { ok: true, value: { turnId: `turn-${sequence}`, outcome: 'failed', error: 'Errore pubblico.' } };
-  return { ok: true, value: { turnId: `turn-${sequence}`, outcome: 'answered' } };
-} });
-registerListRoute(server, { language: 'it', maxPageSize: 100, listConversations: async () => ({
-  items: [{ id: '11111111-1111-4111-8111-111111111111', lastActivityAt: new Date('2026-10-16T10:00:00.000Z') }], next: null,
-}) });
-registerHistoryRoute(server, { language: 'it', getConversation: async () => ({ ok: true, value: {
-  id: '11111111-1111-4111-8111-111111111111', createdAt: '2026-10-16T10:00:00.000Z',
-  lastActivityAt: '2026-10-16T10:00:00.000Z', turns: [
-    { id: 't-pending', text: 'ciao', acceptedAt: '2026-10-16T10:00:00.000Z', status: 'pending' },
-  ],
-} }) });
-
-try {
-  const address = await server.listen({ port: 0, host: '127.0.0.1' });
-  const client = new AmbrogioBackend(backendUrl(address));
-  const deltas = [];
-  const answered = await client.send('ciao', null, delta => deltas.push(delta));
-  assert.deepEqual(deltas, ['Ciao ', 'dal backend']);
-  assert.deepEqual(answered, { status: 'answered', conversationId: '11111111-1111-4111-8111-111111111111', turnId: 'turn-1', answer: 'Ciao dal backend' });
-  assert.deepEqual(await client.send('errore', answered.conversationId, () => {}), {
-    status: 'failed', conversationId: answered.conversationId, error: 'Errore pubblico.',
-  });
-  await assert.rejects(client.send('occupato', null, () => {}), error =>
-    error instanceof PublicHttpError && error.status === 409 && error.message === 'Un altro turno è in corso.');
-  assert.equal((await client.list()).items.length, 1);
-  assert.equal((await client.history(answered.conversationId)).turns[0].status, 'pending');
-  process.stdout.write('Pinned backend HTTP adapters: turn, SSE success/error, JSON rejection, list, history OK\n');
-} finally {
-  await server.close();
-}
+const { AmbrogioBackend, backendUrl } = await import(pathToFileURL(`${cli}/dist/src/backend.js`));
+const identity = { clientId: 'cli-verifica', name: 'Terminale verifica' };
+const text = value => ({ kind: 'text', text: value });
+const expectation = expectsReply => ({ kind: 'reply_expectation', expectsReply });
 
 const directory = await mkdtemp(join(tmpdir(), 'ambrogio-cli-full-server-'));
 let runtime;
 let child;
 let releaseSlow = () => {};
 const slowReply = new Promise(resolve => { releaseSlow = resolve; });
+const neverReply = new Promise(() => {});
 try {
   const probe = createPortProbe();
   probe.listen(0, '127.0.0.1');
@@ -84,12 +41,14 @@ try {
   runtime = await startConversationServer({ AMBROGIO_HTTP_CONFIG_PATH: httpConfig,
     AMBROGIO_CONVERSATIONS_CONFIG_PATH: conversationsConfig }, directory,
   async () => ({ orchestrator: { async *produce(history) {
-    const text = history.turns.at(-1)?.text;
-    if (text === 'errore') { yield 'parziale'; throw new Error('guasto controllato'); }
-    if (text === 'lento') { yield 'Inizio '; await slowReply; yield 'fine'; return; }
-    yield 'Ciao ';
+    const last = history.turns.at(-1)?.text;
+    if (last === 'errore') { yield text('parziale'); throw new Error('guasto controllato'); }
+    if (last === 'lento') { yield text('Inizio '); await slowReply; yield text('fine'); yield expectation(false); return; }
+    if (last === 'arresto') { yield text('sto pensando'); await neverReply; return; }
+    yield text('Ciao ');
     await new Promise(resolve => setTimeout(resolve, 15));
-    yield 'dal server.';
+    yield text('dal server.');
+    yield expectation(false);
   } }, async close() {} }));
 
   const origin = `http://127.0.0.1:${port}`;
@@ -107,7 +66,7 @@ try {
       await new Promise(resolve => setTimeout(resolve, 25));
     }
   }
-  const client = new AmbrogioBackend(backendUrl(origin));
+  const client = new AmbrogioBackend(backendUrl(origin), identity);
   await until(() => output.includes('Nuova chat'), 'nuova chat iniziale');
   child.stdin.write('ciao\r');
   let conversationId;
@@ -143,21 +102,46 @@ try {
     [['ciao', 'answered'], ['ancora', 'answered'], ['errore', 'failed']]);
   assert.equal(history.turns[2].error, 'Non riesco a completare la risposta.');
   assert.equal(history.turns[2].answer, undefined);
-  const slowTurn = client.send('lento', list.items[0].id, () => {});
+  const conversation = list.items[0].id;
+  const deltas = [];
+  assert.deepEqual(await client.send('di nuovo', conversation, delta => deltas.push(delta)),
+    { status: 'answered', conversationId: conversation, turnId: (await client.history(conversation)).turns[3].id,
+      answer: 'Ciao dal server.' });
+  assert.deepEqual(deltas, ['Ciao ', 'dal server.']);
+  assert.deepEqual(await client.send('errore', conversation, () => {}),
+    { status: 'failed', conversationId: conversation, error: 'Non riesco a completare la risposta.' });
+  assert.deepEqual(await client.send('ciao', 'inesistente', () => {}),
+    { status: 'failed', conversationId: 'inesistente', error: 'Conversazione non trovata.' });
+
+  const other = new AmbrogioBackend(backendUrl(origin), { clientId: 'cli-altro', name: 'Terminale altro' });
+  const slowTurn = client.send('lento', conversation, () => {});
   let pending;
   for (let attempt = 0; attempt < 50; attempt += 1) {
-    pending = await client.history(list.items[0].id);
-    if (pending.turns[3]?.status === 'pending') break;
+    pending = await client.history(conversation);
+    if (pending.turns.at(-1)?.status === 'pending') break;
     await new Promise(resolve => setTimeout(resolve, 10));
   }
-  assert.equal(pending.turns[3].status, 'pending');
-  assert.equal(pending.turns[3].answer, undefined);
+  assert.equal(pending.turns.at(-1).text, 'lento');
+  assert.equal(pending.turns.at(-1).status, 'pending');
+  assert.equal(pending.turns.at(-1).answer, undefined);
+  assert.deepEqual(await other.send('anche io', conversation, () => {}),
+    { status: 'failed', conversationId: conversation, error: 'Un altro turno è in corso.' });
   releaseSlow();
   assert.equal((await slowTurn).status, 'answered');
-  const refreshed = await client.history(list.items[0].id);
-  assert.equal(refreshed.turns[3].status, 'answered');
-  assert.equal(refreshed.turns[3].answer, 'Inizio fine');
-  process.stdout.write('Full pinned HTTP server with controlled producer + separate terminal client: new, list, reopen, continue, persisted error, pending refresh OK\n');
+  const refreshed = await client.history(conversation);
+  assert.equal(refreshed.turns.at(-1).status, 'answered');
+  assert.equal(refreshed.turns.at(-1).answer, 'Inizio fine');
+  assert.ok(refreshed.turns.every(turn => turn.text !== 'anche io'), 'the rejected turn is not stored');
+
+  const stopping = client.send('arresto', conversation, () => {});
+  await until(async () => (await client.history(conversation)).turns.at(-1)?.text === 'arresto', 'turno da interrompere');
+  const closing = runtime.close();
+  runtime = undefined;
+  assert.deepEqual(await stopping, { status: 'interrupted', conversationId: conversation });
+  await closing;
+  await other.close();
+  await client.close();
+  process.stdout.write('Full pinned ambrogio.v1 server with controlled producer + separate terminal client: new, list, reopen, continue, progressive answer, persisted error, rejections, pending refresh, shutdown interruption OK\n');
 } finally {
   releaseSlow();
   if (child?.exitCode === null) child.kill();

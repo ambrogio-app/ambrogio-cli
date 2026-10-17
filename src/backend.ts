@@ -1,4 +1,4 @@
-import { createParser } from 'eventsource-parser';
+import { randomUUID } from 'node:crypto';
 
 export type ConversationItem = { id: string; lastActivityAt: string };
 export type ConversationPage = { items: ConversationItem[]; nextCursor: string | null };
@@ -21,6 +21,21 @@ export type TurnResult =
   | { status: 'answered'; conversationId: string; turnId: string; answer: string }
   | { status: 'failed'; conversationId: string | null; error: string }
   | { status: 'interrupted'; conversationId: string | null };
+
+export type ClientIdentity = { clientId: string; name: string };
+type Message = Record<string, unknown> & { type?: unknown };
+type PendingTurn = {
+  conversationId: string | null;
+  turnId?: string;
+  answer: string;
+  streams: Set<number>;
+  onDelta: (delta: string) => void;
+  settle: (result: TurnResult) => void;
+};
+
+const protocol = 'ambrogio.v1';
+const maxTextBytes = 65_536;
+const readyTimeoutMs = 10_000;
 
 export class PublicHttpError extends Error {
   constructor(readonly status: number, message: string) { super(message); }
@@ -62,10 +77,164 @@ async function ensureSuccess(response: Response): Promise<unknown> {
   return body;
 }
 
+/** The WebSocket address of the conversation channel under the backend base URL. */
+export function sessionUrl(base: URL): URL {
+  const url = new URL('api/session', base);
+  url.protocol = base.protocol === 'https:' ? 'wss:' : 'ws:';
+  return url;
+}
+
+/** One `ambrogio.v1` session carrying the turns of every conversation. */
+class ConversationSession {
+  private readonly turns = new Map<string, PendingTurn>();
+  private readonly streams = new Map<number, string>();
+  private nextStream = 1;
+  closed = false;
+
+  private constructor(private readonly socket: WebSocket) {
+    socket.addEventListener('message', event => this.receive(event.data));
+    socket.addEventListener('close', () => this.release());
+    socket.addEventListener('error', () => { /* the close event concludes pending turns */ });
+  }
+
+  static async open(url: URL, identity: ClientIdentity): Promise<ConversationSession> {
+    const socket = new WebSocket(url, protocol);
+    socket.binaryType = 'arraybuffer';
+    const session = new ConversationSession(socket);
+    await new Promise<void>((resolve, reject) => {
+      const fail = () => { clearTimeout(timer); reject(new Error('Impossibile collegarsi al backend.')); };
+      const timer = setTimeout(() => { socket.close(); fail(); }, readyTimeoutMs);
+      socket.addEventListener('close', fail, { once: true });
+      socket.addEventListener('open', () => {
+        if (socket.protocol !== protocol) { socket.close(); return; }
+        socket.send(JSON.stringify({ type: 'session.hello', clientId: identity.clientId, name: identity.name }));
+      }, { once: true });
+      socket.addEventListener('message', event => {
+        if (typeof event.data !== 'string') return;
+        let message: unknown;
+        try { message = JSON.parse(event.data); } catch { return; }
+        if (object(message)?.type !== 'session.ready') return;
+        clearTimeout(timer);
+        socket.removeEventListener('close', fail);
+        resolve();
+      });
+    });
+    return session;
+  }
+
+  send(text: string, conversationId: string | null, onDelta: (delta: string) => void): Promise<TurnResult> {
+    const requestId = randomUUID();
+    const stream = this.nextStream++;
+    return new Promise<TurnResult>(resolve => {
+      this.turns.set(requestId, { conversationId, answer: '', streams: new Set(), onDelta,
+        settle: result => { this.turns.delete(requestId); resolve(result); } });
+      this.write({ type: 'input.start', requestId, stream, content: { type: 'text' }, reply: 'text',
+        ...(conversationId ? { conversationId } : {}) });
+      this.write({ type: 'input.chunk', requestId, text });
+      this.write({ type: 'input.end', requestId });
+    });
+  }
+
+  close(): void { this.socket.close(1000); }
+
+  private write(message: Message): void {
+    if (this.socket.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify(message));
+  }
+
+  private receive(data: unknown): void {
+    if (typeof data !== 'string') return;
+    let value: unknown;
+    try { value = JSON.parse(data); } catch { return; }
+    const message = object(value);
+    if (!message || !string(message.type)) return;
+    const turnFor = (requestId: unknown) => string(requestId) ? this.turns.get(requestId) : undefined;
+    const byTurnId = (turnId: unknown) => [...this.turns.values()].find(turn => turn.turnId === turnId);
+    switch (message.type) {
+      case 'turn.accepted': {
+        const turn = turnFor(message.requestId);
+        if (turn && string(message.conversationId) && string(message.turnId)) {
+          turn.conversationId = message.conversationId;
+          turn.turnId = message.turnId;
+        }
+        return;
+      }
+      case 'output.start': {
+        const turn = turnFor(message.requestId);
+        if (turn && typeof message.stream === 'number') {
+          this.streams.set(message.stream, message.requestId as string);
+          turn.streams.add(message.stream);
+        }
+        return;
+      }
+      case 'output.chunk': {
+        const requestId = typeof message.stream === 'number' ? this.streams.get(message.stream) : undefined;
+        const turn = turnFor(requestId);
+        if (turn && string(message.text)) { turn.answer += message.text; turn.onDelta(message.text); }
+        return;
+      }
+      case 'output.end':
+        if (typeof message.stream === 'number') this.streams.delete(message.stream);
+        return;
+      case 'turn.completed': {
+        const turn = byTurnId(message.turnId);
+        if (turn) turn.settle({ status: 'answered', conversationId: turn.conversationId!,
+          turnId: turn.turnId!, answer: turn.answer });
+        return;
+      }
+      case 'turn.failed': {
+        const turn = byTurnId(message.turnId);
+        if (turn) turn.settle({ status: 'failed', conversationId: turn.conversationId,
+          error: string(message.message) ? message.message : 'Errore del turno.' });
+        return;
+      }
+      case 'turn.interrupted': {
+        const turn = byTurnId(message.turnId);
+        if (turn) turn.settle({ status: 'interrupted', conversationId: turn.conversationId });
+        return;
+      }
+      case 'turn.rejected': {
+        const turn = turnFor(message.requestId);
+        if (turn) turn.settle({ status: 'failed', conversationId: turn.conversationId,
+          error: string(message.message) ? message.message : 'Turno rifiutato.' });
+        return;
+      }
+      case 'session.error': {
+        const turn = turnFor(message.requestId);
+        if (turn) turn.settle({ status: 'failed', conversationId: turn.conversationId,
+          error: `Errore del protocollo: ${string(message.message) ? message.message : 'messaggio non valido.'}` });
+        return;
+      }
+      default:
+        // Server messages outside turns that ask for an action are not supported by this client.
+        if (string(message.id) && !message.type.startsWith('session.') && !message.type.startsWith('output.')
+          && !message.type.startsWith('turn.')) {
+          this.write({ type: 'client.result', id: message.id, ok: false, reason: 'unsupported' });
+        }
+    }
+  }
+
+  private release(): void {
+    if (this.closed) return;
+    this.closed = true;
+    for (const turn of [...this.turns.values()]) {
+      turn.settle({ status: 'interrupted', conversationId: turn.conversationId });
+    }
+  }
+}
+
 export class AmbrogioBackend {
-  constructor(private readonly base: URL, private readonly request: typeof fetch = fetch) {}
+  private session?: Promise<ConversationSession>;
+
+  constructor(private readonly base: URL, private readonly identity: ClientIdentity,
+    private readonly request: typeof fetch = fetch) {}
 
   private endpoint(path: string): URL { return new URL(path, this.base); }
+
+  /** Close the conversation session, if one is open. */
+  async close(): Promise<void> {
+    const session = await this.session?.catch(() => undefined);
+    session?.close();
+  }
 
   async list(cursor?: string): Promise<ConversationPage> {
     const url = this.endpoint('api/conversations');
@@ -109,64 +278,12 @@ export class AmbrogioBackend {
 
   async send(text: string, conversationId: string | null, onDelta: (delta: string) => void): Promise<TurnResult> {
     if (!text.trim()) throw new Error('Scrivi un messaggio non vuoto.');
-    const payload = JSON.stringify({ text, ...(conversationId ? { conversationId } : {}) });
-    if (Buffer.byteLength(payload, 'utf8') > 65_536) throw new Error('Messaggio troppo grande (massimo 64 KiB).');
-    const response = await this.request(this.endpoint('api/conversations/turns'), {
-      method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' }, body: payload,
-    });
-    if (!response.ok) {
-      await ensureSuccess(response);
-      throw new Error(`Errore HTTP ${response.status}.`);
+    if (Buffer.byteLength(text, 'utf8') > maxTextBytes) throw new Error('Messaggio troppo grande (massimo 64 KiB).');
+    let session = await this.session?.catch(() => undefined);
+    if (!session || session.closed) {
+      this.session = ConversationSession.open(sessionUrl(this.base), this.identity);
+      session = await this.session;
     }
-    if (!response.headers.get('content-type')?.toLowerCase().startsWith('text/event-stream')
-      || response.headers.get('x-vercel-ai-ui-message-stream') !== 'v1' || !response.body) {
-      throw new Error('Il backend non ha restituito il flusso UI atteso.');
-    }
-
-    let streamConversationId: string | null = conversationId;
-    let turnId: string | null = null;
-    let answer = '';
-    let result: TurnResult | null = null;
-    const parser = createParser({ onEvent(event) {
-      if (event.data === '[DONE]' || result) return;
-      let value: unknown;
-      try { value = JSON.parse(event.data); } catch { throw new Error('Parte SSE non valida.'); }
-      const part = requireObject(value, 'del flusso');
-      if (part.type === 'start') {
-        const metadata = object(part.messageMetadata);
-        if (!string(metadata?.conversationId) || !string(metadata?.turnId)) {
-          throw new Error('Identità del turno mancante nel flusso.');
-        }
-        streamConversationId = metadata.conversationId;
-        turnId = metadata.turnId;
-      } else if (part.type === 'text-delta') {
-        if (!string(part.delta)) throw new Error('Incremento testuale non valido.');
-        answer += part.delta;
-        onDelta(part.delta);
-      } else if (part.type === 'error') {
-        result = { status: 'failed', conversationId: streamConversationId,
-          error: string(part.errorText) ? part.errorText : 'Errore nel flusso.' };
-      } else if (part.type === 'finish' && part.finishReason === 'stop'
-        && object(part.messageMetadata)?.turnStatus === 'answered' && streamConversationId && turnId) {
-        result = { status: 'answered', conversationId: streamConversationId, turnId, answer };
-      }
-    } });
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        parser.feed(decoder.decode(value, { stream: true }));
-      }
-      parser.feed(decoder.decode());
-      parser.reset({ consume: true });
-    } catch {
-      if (result) return result;
-      return { status: 'interrupted', conversationId: streamConversationId };
-    } finally {
-      reader.releaseLock();
-    }
-    return result ?? { status: 'interrupted', conversationId: streamConversationId };
+    return session.send(text, conversationId, onDelta);
   }
 }

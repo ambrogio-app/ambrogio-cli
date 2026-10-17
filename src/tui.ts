@@ -1,5 +1,5 @@
 import terminalKit from 'terminal-kit';
-import { AmbrogioBackend, type Conversation, type ConversationItem, type TurnResult } from './backend.js';
+import { AmbrogioBackend, type ClientIdentity, type Conversation, type ConversationItem, type TurnResult } from './backend.js';
 
 // The document widgets in Terminal Kit 3 are absent from @types/terminal-kit.
 const kit: any = terminalKit;
@@ -15,8 +15,8 @@ function label(value: string, width = 52): string {
 
 function errorText(value: unknown): string { return value instanceof Error ? value.message : String(value); }
 
-export async function runTerminalChat(url: URL): Promise<void> {
-  const backend = new AmbrogioBackend(url);
+export async function runTerminalChat(url: URL, identity: ClientIdentity): Promise<void> {
+  const backend = new AmbrogioBackend(url, identity);
   const entries: Entry[] = [];
   let currentId: string | null = null;
   let currentLabel = 'Nuova chat';
@@ -272,5 +272,8 @@ export async function runTerminalChat(url: URL): Promise<void> {
   term.on('resize', onResize);
   void loadList();
   try { await done; }
-  finally { if (!closed) close(); }
+  finally {
+    if (!closed) close();
+    await backend.close();
+  }
 }
