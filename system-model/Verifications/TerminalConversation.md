@@ -74,6 +74,7 @@ La prova passa se senza configurazione il `clientId` è `cli-<nome host>` e il `
 
 #### Relations
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
+  * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
   * verify: [Identificazione del client terminale nella sessione](../Requirements/TerminalConversation.md#identificazione-del-client-terminale-nella-sessione)
 ---
 

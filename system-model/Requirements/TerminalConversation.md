@@ -52,6 +52,7 @@ Quando il client apre la sessione conversazionale, deve presentarsi al backend c
   * type: requirement
 
 #### Relations
+  * satisfiedBy: [cli.ts](../../src/cli.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
