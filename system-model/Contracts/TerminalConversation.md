@@ -44,6 +44,25 @@ Prima di iniziare l'interazione, il client richiede un URL base HTTP o HTTPS del
   * define: [Client conversazionale nel terminale](../Requirements/TerminalConversation.md#client-conversazionale-nel-terminale)
 ---
 
+### Profilo di scansione dei segreti con gitleaks
+
+Decisione concordata con la persona il 18 ottobre 2026: il repository del client usa gitleaks per impedire che segreti, come chiavi API o token, entrino nella storia Git. Il controllo avviene in due punti.
+
+- **CI.** Il workflow `.github/workflows/secret-scan.yml` si esegue a ogni push su qualunque branch, a ogni pull request, su richiesta manuale e come workflow richiamabile. Recupera l'intera storia con `actions/checkout` fissato al commit `d23441a48e516b6c34aea4fa41551a30e30af803` (v6), `fetch-depth: 0` e `persist-credentials: false`. Scarica dalla release ufficiale gitleaks v8.30.1, archivio `gitleaks_8.30.1_linux_x64.tar.gz`, ne verifica lo SHA-256 `551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb` prima di estrarlo e interrompe il job se l'impronta non corrisponde. Esegue `gitleaks git --redact --no-banner --exit-code 1 .` sull'intera storia: un rilevamento fa fallire il job e l'output non riporta il valore del segreto.
+- **Hook locale.** Lo script POSIX versionato `.githooks/pre-commit` esegue `gitleaks git --pre-commit --staged --redact --no-banner .` sulle modifiche in staging. Se `gitleaks` non è disponibile nel `PATH`, stampa un messaggio che indica come installarlo e termina con esito non riuscito, impedendo il commit. L'hook si attiva in ogni clone con `git config core.hooksPath .githooks`; l'attivazione è locale e non è imposta dal repository.
+
+Si usa la configurazione predefinita di gitleaks, senza file `.gitleaks.toml`, finché non emergono falsi positivi da gestire esplicitamente. Un aggiornamento di gitleaks cambia insieme versione e impronta in questo contratto e nel workflow.
+
+#### Alternative e conseguenze
+Sono state considerate l'action ufficiale `gitleaks/gitleaks-action`, che richiede una licenza quando il repository appartiene a un'organizzazione, il solo controllo in CI, che scopre il segreto quando è già nella storia locale e pubblicata, e il solo hook locale, che dipende dall'attivazione in ogni clone e non protegge le modifiche che arrivano da altri ambienti. La combinazione scelta blocca il segreto prima del commit quando l'hook è attivo e lo rileva comunque al push. Il binario fissato con impronta verificata non dipende da licenze né da action di terzi oltre al checkout.
+
+#### Metadata
+  * type: specification
+
+#### Relations
+  * define: [Scansione dei segreti nella CI](../Requirements/TerminalConversation.md#scansione-dei-segreti-nella-ci)
+---
+
 ### Schermata conversazionale a due pannelli
 
 Il client usa Terminal Kit per una schermata interattiva persistente. All'avvio una voce locale «Nuova chat» è selezionata come prima voce; non crea una conversazione vuota sul backend. Quando il primo turno è inviato, la voce prende come nome l'anteprima del testo inviato e resta la chat corrente anche durante la risposta. La barra laterale a sinistra mostra le conversazioni paginabili con l'anteprima del primo messaggio della persona, ricavata dagli storici HTTP pubblici delle sole chat visibili. Se il recupero di uno storico fallisce, la voce resta selezionabile con ID abbreviato. Il pannello destro conserva lo storico della chat selezionata, la risposta in generazione e il campo di scrittura per tutta l'interazione; inviare un turno non torna a una schermata di menu. `Tab` sposta il focus tra barra laterale e campo di scrittura; nell'elenco le frecce cambiano selezione e `Invio` apre la chat. La schermata indica i comandi per nuova chat, aggiornamento manuale, pagina successiva e uscita. Al ridimensionamento del terminale il client ricalcola i pannelli; quando lo spazio non consente due pannelli leggibili chiede di allargare il terminale senza perdere la conversazione corrente.

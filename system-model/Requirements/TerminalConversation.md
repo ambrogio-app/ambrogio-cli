@@ -44,6 +44,20 @@ Quando il client terminale comunica con il backend Ambrogio, deve usare il proto
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
+### Controllo dei segreti prima del commit
+
+Quando si crea un commit in un clone del repository con gli hook versionati attivi, il controllo pre-commit deve scansionare con gitleaks le modifiche in staging e deve impedire il commit se rileva un segreto oppure se gitleaks non è disponibile.
+
+#### Metadata
+  * type: requirement
+
+#### Contract References
+  * [Profilo di scansione dei segreti con gitleaks](../Contracts/TerminalConversation.md#profilo-di-scansione-dei-segreti-con-gitleaks)
+
+#### Relations
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
 ### Identificazione del client terminale nella sessione
 
 Quando il client apre la sessione conversazionale, deve presentarsi al backend con un identificativo di client stabile e un nome leggibile, configurabili all'avvio e con un valore predefinito ricavato dalla macchina.
@@ -199,6 +213,17 @@ Quando il client della chat testuale aggiorna l'elenco delle conversazioni conse
 
 #### Relations
   * satisfiedBy: [tui.ts](../../src/tui.ts)
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
+### Scansione dei segreti nella CI
+
+Quando viene eseguito un push su qualunque branch o viene proposta una pull request, la CI del repository deve scansionare con gitleaks l'intera storia Git del client e deve fallire se rileva un segreto, senza riportarne il valore nell'output.
+
+#### Metadata
+  * type: requirement
+
+#### Relations
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 

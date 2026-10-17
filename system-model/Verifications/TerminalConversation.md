@@ -39,6 +39,36 @@ Il controllo passa se il repository e il modello Reqvire sono autonomi dal backe
   * verify: [Stack del client terminale](../Requirements/TerminalConversation.md#stack-del-client-terminale)
 ---
 
+### Controllo dell'hook pre-commit dei segreti
+
+Attivare l'hook con `git config core.hooksPath .githooks` in un clone di prova, mettere in staging un file con un token fittizio riconosciuto da gitleaks e tentare il commit; ripetere con un file privo di segreti e con `gitleaks` assente dal `PATH`.
+
+#### Details
+Il controllo passa se il commit con il token fittizio viene rifiutato senza mostrarne il valore, il commit senza segreti riesce e, senza `gitleaks` nel `PATH`, il commit viene rifiutato con un messaggio che indica come installarlo. Il clone di prova viene eliminato dopo il controllo.
+
+#### Metadata
+  * type: inspection-verification
+
+#### Relations
+  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
+  * verify: [Controllo dei segreti prima del commit](../Requirements/TerminalConversation.md#controllo-dei-segreti-prima-del-commit)
+---
+
+### Controllo della scansione dei segreti in CI
+
+Esaminare `.github/workflows/secret-scan.yml` ed eseguirlo su GitHub dopo un push.
+
+#### Details
+Il controllo passa se il workflow si attiva su push di qualunque branch, pull request, richiesta manuale e chiamata da altri workflow; recupera l'intera storia con il checkout fissato e senza credenziali persistenti; scarica gitleaks v8.30.1, ne verifica lo SHA-256 prima dell'estrazione e interrompe il job se l'impronta non corrisponde; esegue `gitleaks git --redact --no-banner --exit-code 1 .`; e l'esecuzione su GitHub termina con successo sulla storia corrente. Fallisce se una di queste condizioni manca o se l'output riporta il valore di un segreto.
+
+#### Metadata
+  * type: inspection-verification
+
+#### Relations
+  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
+  * verify: [Scansione dei segreti nella CI](../Requirements/TerminalConversation.md#scansione-dei-segreti-nella-ci)
+---
+
 ### Prova del client conversazionale nel terminale
 
 Avviare il backend e il client terminale come processi distinti, rendendo disponibili al client soltanto il canale conversazionale `ambrogio.v1` e le API HTTP pubbliche del backend. Dal terminale inviare un nuovo turno e osservare una risposta prodotta in più frammenti; consultare le conversazioni conservate e proseguire quella creata, recuperandone lo storico dal backend. Ripetere con un turno rifiutato, per esempio la continuazione di una conversazione occupata, con un errore dopo l'ammissione a risposta già iniziata e con la chiusura della sessione prima dell'esito.
