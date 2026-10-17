@@ -72,6 +72,12 @@ npm run test:backend   # end-to-end test against a pinned ambrogio-backend check
 
 `npm run test:backend` expects a built checkout of `ambrogio-backend` at `../ambrogio-backend`, or at the path in `AMBROGIO_BACKEND_REPO`.
 
+[gitleaks](https://github.com/gitleaks/gitleaks) 8.30.1 checks for secrets. CI scans the whole history on every push and pull request (`.github/workflows/secret-scan.yml`). Locally, enable the versioned pre-commit hook once per clone; it needs `gitleaks` on `PATH` and blocks commits that add a secret:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 Ambrogio is developed model first with [Reqvire](https://reqvire.org/). This repository is self-contained: the repository root is its Reqvire workspace, and [`system-model/`](system-model/) records the client's own requirements, contracts, verifications and technical decisions. The backend's public protocol and HTTP API belong to `ambrogio-backend`. [`AGENTS.md`](AGENTS.md) describes the workflow.
 
 ## License
