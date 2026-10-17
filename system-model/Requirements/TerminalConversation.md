@@ -55,6 +55,7 @@ Quando si crea un commit in un clone del repository con gli hook versionati atti
   * [Profilo di scansione dei segreti con gitleaks](../Contracts/TerminalConversation.md#profilo-di-scansione-dei-segreti-con-gitleaks)
 
 #### Relations
+  * satisfiedBy: [pre-commit](../../.githooks/pre-commit)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -224,6 +225,7 @@ Quando viene eseguito un push su qualunque branch o viene proposta una pull requ
   * type: requirement
 
 #### Relations
+  * satisfiedBy: [secret-scan.yml](../../.github/workflows/secret-scan.yml)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
