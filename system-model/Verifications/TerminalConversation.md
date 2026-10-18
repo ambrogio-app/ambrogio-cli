@@ -109,10 +109,10 @@ La prova passa se la persona può conversare dal terminale, osserva i frammenti 
 
 ### Prova dell'identità del client nella sessione
 
-Avviare il client contro un backend controllato senza configurazione dell'identità, poi con `AMBROGIO_CLIENT_ID`, poi con `--client-id` insieme alla variabile; inviare un turno in ciascun caso e osservare `session.hello`. Provare anche un valore vuoto.
+Avviare il client contro un backend controllato senza configurazione dell'identità, poi con `AMBROGIO_CLIENT_ID`, poi con `--client-id` insieme alla variabile; inviare un turno in ciascun caso e osservare `session.hello`. Ripetere il caso senza configurazione con l'interfaccia in inglese. Provare anche un valore vuoto.
 
 #### Details
-La prova passa se senza configurazione il `clientId` è `cli-<nome host>` e il `name` è `Terminale <nome host>`, se la variabile sostituisce il valore predefinito e l'opzione prevale sulla variabile, e se un valore vuoto impedisce l'avvio con un'indicazione d'uso. Fallisce se il `clientId` cambia tra avvii con la stessa configurazione o se il client apre una sessione con un identificativo vuoto.
+La prova passa se senza configurazione il `clientId` è `cli-<nome host>` e il `name` è `Terminale <nome host>` con l'interfaccia in italiano e `Terminal <nome host>` con l'interfaccia in inglese, con lo stesso `clientId`; se la variabile sostituisce il valore predefinito e l'opzione prevale sulla variabile, e se un valore vuoto impedisce l'avvio con un'indicazione d'uso. Fallisce se il `clientId` cambia tra avvii con la stessa configurazione o se il client apre una sessione con un identificativo vuoto.
 
 #### Metadata
   * type: test-verification
@@ -137,6 +137,23 @@ La prova passa se la conversazione riaperta mostra il turno «In elaborazione» 
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
   * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
   * verify: [Invito ad aggiornare la conversazione in elaborazione](../Requirements/TerminalConversation.md#invito-ad-aggiornare-la-conversazione-in-elaborazione)
+---
+
+### Prova della lingua dell'interfaccia del client terminale
+
+Calcolare la lingua dell'interfaccia per combinazioni di `--language`, `AMBROGIO_LANGUAGE`, `LC_ALL`, `LC_MESSAGES` e `LANG`: opzione e variabile diverse, variabile vuota, nessuna variabile di sistema, `C`, `POSIX`, valori che iniziano con `it` ed `en` e un primo valore non vuoto diverso dai successivi. Confrontare le voci italiane e inglesi del catalogo nel codice con il contratto. Avviare il processo con un valore non supportato nell'opzione e nella variabile, senza URL del backend in italiano e in inglese e con `--help`. In un terminale simulato contro un backend controllato avviare il client in inglese e in italiano, inviare un turno, osservare la schermata e `session.hello`, e far rispondere il backend con un messaggio pubblico di rifiuto.
+
+#### Details
+La prova passa se l'opzione prevale sulla variabile; una variabile vuota è ignorata; senza opzione né variabile vale il primo valore non vuoto fra `LC_ALL`, `LC_MESSAGES` e `LANG`, con italiano soltanto quando inizia con `it` e inglese in ogni altro caso, compresa l'assenza di valori; un valore non supportato termina l'avvio con codice `2`, «Opzioni non valide.» o «Invalid options.» e l'indicazione d'uso nella lingua stabilita senza quel valore; le due lingue del catalogo hanno le stesse voci e coincidono con il contratto; la schermata in inglese mostra «New chat» e i comandi inglesi, la schermata in italiano «Nuova chat», il `name` è `Terminal <nome host>` o `Terminale <nome host>` secondo la lingua e il messaggio del backend compare invariato. Fallisce se un testo del client compare nella lingua non scelta, se la lingua dipende da variabili diverse da quelle indicate o se un testo del backend viene tradotto.
+
+#### Metadata
+  * type: test-verification
+
+#### Relations
+  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
+  * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
+  * verify: [Scelta della lingua dell'interfaccia del client terminale](../Requirements/TerminalConversation.md#scelta-della-lingua-dellinterfaccia-del-client-terminale)
+  * verify: [Testi del client terminale nella lingua dell'interfaccia](../Requirements/TerminalConversation.md#testi-del-client-terminale-nella-lingua-dellinterfaccia)
 ---
 
 ### Prova della ripartenza dell'elenco aggiornato

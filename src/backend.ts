@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { Texts } from './i18n.js';
 
 export type ConversationItem = { id: string; lastActivityAt: string };
 export type ConversationPage = { items: ConversationItem[]; nextCursor: string | null };
@@ -48,31 +49,31 @@ function object(value: unknown): Record<string, unknown> | null {
 
 function string(value: unknown): value is string { return typeof value === 'string'; }
 
-function requireObject(value: unknown, description: string): Record<string, unknown> {
+function requireObject(value: unknown, message: string): Record<string, unknown> {
   const record = object(value);
-  if (!record) throw new Error(`Risposta ${description} non valida.`);
+  if (!record) throw new Error(message);
   return record;
 }
 
-export function backendUrl(value: string): URL {
+export function backendUrl(value: string, texts: Texts): URL {
   let url: URL;
-  try { url = new URL(value); } catch { throw new Error('URL del backend non valido.'); }
+  try { url = new URL(value); } catch { throw new Error(texts.invalidUrl); }
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
-    throw new Error('L’URL del backend deve essere HTTP(S), senza credenziali, query o frammento.');
+    throw new Error(texts.urlNotAllowed);
   }
   url.pathname = url.pathname.replace(/\/?$/, '/');
   return url;
 }
 
-async function readJson(response: Response): Promise<unknown> {
-  try { return await response.json(); } catch { throw new Error('Risposta JSON del backend non valida.'); }
+async function readJson(response: Response, texts: Texts): Promise<unknown> {
+  try { return await response.json(); } catch { throw new Error(texts.invalidJson); }
 }
 
-async function ensureSuccess(response: Response): Promise<unknown> {
-  const body = await readJson(response);
+async function ensureSuccess(response: Response, texts: Texts): Promise<unknown> {
+  const body = await readJson(response, texts);
   if (!response.ok) {
     const error = object(body)?.error;
-    throw new PublicHttpError(response.status, string(error) ? error : `Errore HTTP ${response.status}.`);
+    throw new PublicHttpError(response.status, string(error) ? error : texts.httpError(response.status));
   }
   return body;
 }
@@ -91,18 +92,18 @@ class ConversationSession {
   private nextStream = 1;
   closed = false;
 
-  private constructor(private readonly socket: WebSocket) {
+  private constructor(private readonly socket: WebSocket, private readonly texts: Texts) {
     socket.addEventListener('message', event => this.receive(event.data));
     socket.addEventListener('close', () => this.release());
     socket.addEventListener('error', () => { /* the close event concludes pending turns */ });
   }
 
-  static async open(url: URL, identity: ClientIdentity): Promise<ConversationSession> {
+  static async open(url: URL, identity: ClientIdentity, texts: Texts): Promise<ConversationSession> {
     const socket = new WebSocket(url, protocol);
     socket.binaryType = 'arraybuffer';
-    const session = new ConversationSession(socket);
+    const session = new ConversationSession(socket, texts);
     await new Promise<void>((resolve, reject) => {
-      const fail = () => { clearTimeout(timer); reject(new Error('Impossibile collegarsi al backend.')); };
+      const fail = () => { clearTimeout(timer); reject(new Error(texts.cannotConnect)); };
       const timer = setTimeout(() => { socket.close(); fail(); }, readyTimeoutMs);
       socket.addEventListener('close', fail, { once: true });
       socket.addEventListener('open', () => {
@@ -184,7 +185,7 @@ class ConversationSession {
       case 'turn.failed': {
         const turn = byTurnId(message.turnId);
         if (turn) turn.settle({ status: 'failed', conversationId: turn.conversationId,
-          error: string(message.message) ? message.message : 'Errore del turno.' });
+          error: string(message.message) ? message.message : this.texts.turnError });
         return;
       }
       case 'turn.interrupted': {
@@ -195,13 +196,13 @@ class ConversationSession {
       case 'turn.rejected': {
         const turn = turnFor(message.requestId);
         if (turn) turn.settle({ status: 'failed', conversationId: turn.conversationId,
-          error: string(message.message) ? message.message : 'Turno rifiutato.' });
+          error: string(message.message) ? message.message : this.texts.turnRejected });
         return;
       }
       case 'session.error': {
         const turn = turnFor(message.requestId);
         if (turn) turn.settle({ status: 'failed', conversationId: turn.conversationId,
-          error: `Errore del protocollo: ${string(message.message) ? message.message : 'messaggio non valido.'}` });
+          error: this.texts.protocolError(string(message.message) ? message.message : undefined) });
         return;
       }
       default:
@@ -226,7 +227,7 @@ export class AmbrogioBackend {
   private session?: Promise<ConversationSession>;
 
   constructor(private readonly base: URL, private readonly identity: ClientIdentity,
-    private readonly request: typeof fetch = fetch) {}
+    private readonly texts: Texts, private readonly request: typeof fetch = fetch) {}
 
   private endpoint(path: string): URL { return new URL(path, this.base); }
 
@@ -240,13 +241,13 @@ export class AmbrogioBackend {
     const url = this.endpoint('api/conversations');
     if (cursor !== undefined) url.searchParams.set('cursor', cursor);
     const response = await this.request(url, { headers: { Accept: 'application/json' } });
-    const body = requireObject(await ensureSuccess(response), 'dell’elenco');
+    const body = requireObject(await ensureSuccess(response, this.texts), this.texts.invalidList);
     if (!Array.isArray(body.items) || !(body.nextCursor === null || string(body.nextCursor))) {
-      throw new Error('Risposta dell’elenco non valida.');
+      throw new Error(this.texts.invalidList);
     }
     const items = body.items.map((item: unknown) => {
-      const entry = requireObject(item, 'dell’elenco');
-      if (!string(entry.id) || !string(entry.lastActivityAt)) throw new Error('Voce dell’elenco non valida.');
+      const entry = requireObject(item, this.texts.invalidList);
+      if (!string(entry.id) || !string(entry.lastActivityAt)) throw new Error(this.texts.invalidListEntry);
       return { id: entry.id, lastActivityAt: entry.lastActivityAt };
     });
     return { items, nextCursor: body.nextCursor };
@@ -255,19 +256,19 @@ export class AmbrogioBackend {
   async history(conversationId: string): Promise<Conversation> {
     const response = await this.request(this.endpoint(`api/conversations/${encodeURIComponent(conversationId)}`),
       { headers: { Accept: 'application/json' } });
-    const body = requireObject(await ensureSuccess(response), 'dello storico');
+    const body = requireObject(await ensureSuccess(response, this.texts), this.texts.invalidHistory);
     if (!string(body.id) || !string(body.createdAt) || !string(body.lastActivityAt) || !Array.isArray(body.turns)) {
-      throw new Error('Risposta dello storico non valida.');
+      throw new Error(this.texts.invalidHistory);
     }
     const turns = body.turns.map((value: unknown): Turn => {
-      const turn = requireObject(value, 'dello storico');
+      const turn = requireObject(value, this.texts.invalidHistory);
       if (!string(turn.id) || !string(turn.text) || !string(turn.acceptedAt)
         || !['pending', 'answered', 'failed', 'interrupted'].includes(String(turn.status))) {
-        throw new Error('Turno dello storico non valido.');
+        throw new Error(this.texts.invalidHistoryTurn);
       }
       const status = turn.status as Turn['status'];
-      if (status === 'answered' && !string(turn.answer)) throw new Error('Risposta del turno non valida.');
-      if (status === 'failed' && !string(turn.error)) throw new Error('Errore del turno non valido.');
+      if (status === 'answered' && !string(turn.answer)) throw new Error(this.texts.invalidTurnAnswer);
+      if (status === 'failed' && !string(turn.error)) throw new Error(this.texts.invalidTurnError);
       return { id: turn.id, text: turn.text, acceptedAt: turn.acceptedAt, status,
         ...(string(turn.answer) ? { answer: turn.answer } : {}),
         ...(string(turn.error) ? { error: turn.error } : {}),
@@ -277,11 +278,11 @@ export class AmbrogioBackend {
   }
 
   async send(text: string, conversationId: string | null, onDelta: (delta: string) => void): Promise<TurnResult> {
-    if (!text.trim()) throw new Error('Scrivi un messaggio non vuoto.');
-    if (Buffer.byteLength(text, 'utf8') > maxTextBytes) throw new Error('Messaggio troppo grande (massimo 64 KiB).');
+    if (!text.trim()) throw new Error(this.texts.emptyMessage);
+    if (Buffer.byteLength(text, 'utf8') > maxTextBytes) throw new Error(this.texts.messageTooLarge);
     let session = await this.session?.catch(() => undefined);
     if (!session || session.closed) {
-      this.session = ConversationSession.open(sessionUrl(this.base), this.identity);
+      this.session = ConversationSession.open(sessionUrl(this.base), this.identity, this.texts);
       session = await this.session;
     }
     return session.send(text, conversationId, onDelta);

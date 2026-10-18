@@ -104,7 +104,7 @@ Quando la famiglia invia un turno testuale dal client terminale, il client deve 
 
 ### Invito ad aggiornare la conversazione in elaborazione
 
-Quando una conversazione riaperta nel client della chat testuale mostra un turno «In elaborazione», il client deve invitare la persona ad aggiornare manualmente la consultazione più tardi per consultarne l'esito.
+Quando una conversazione riaperta nel client della chat testuale mostra un turno «In elaborazione» («In progress» con l'interfaccia in inglese), il client deve invitare la persona ad aggiornare manualmente la consultazione più tardi per consultarne l'esito.
 
 #### Metadata
   * type: requirement
@@ -206,7 +206,7 @@ Quando un turno della chat testuale si conclude, il client deve considerare la r
 
 ### Segnalazione locale dell'interruzione della chat testuale
 
-Quando la sessione conversazionale si chiude prima dell'esito di un turno, oppure il backend comunica `turn.interrupted`, il client deve mostrare lo stato locale «Risposta interrotta» senza trasformare automaticamente l'interruzione in uno scambio di errore conservato.
+Quando la sessione conversazionale si chiude prima dell'esito di un turno, oppure il backend comunica `turn.interrupted`, il client deve mostrare lo stato locale «Risposta interrotta» («Response interrupted» con l'interfaccia in inglese) senza trasformare automaticamente l'interruzione in uno scambio di errore conservato.
 
 #### Metadata
   * type: requirement
@@ -244,6 +244,19 @@ Quando viene eseguito un push su qualunque branch o viene proposta una pull requ
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
+### Scelta della lingua dell'interfaccia del client terminale
+
+All'avvio del client, il client deve stabilire come lingua dell'interfaccia l'italiano o l'inglese indicati con l'opzione di avvio o la variabile d'ambiente dedicate, con l'opzione che prevale sulla variabile; quando nessuna delle due indica la lingua, deve seguire la lingua del sistema; quando il valore indicato non è una lingua supportata, deve terminare l'avvio con un'indicazione d'uso.
+
+#### Metadata
+  * type: requirement
+
+#### Relations
+  * satisfiedBy: [cli.ts](../../src/cli.ts)
+  * satisfiedBy: [i18n.ts](../../src/i18n.ts)
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
 ### Stack del client terminale
 
 Il client terminale deve essere implementato in TypeScript per Node.js e offrire una schermata conversazionale persistente a due pannelli mediante Terminal Kit.
@@ -261,12 +274,27 @@ Il client terminale deve essere implementato in TypeScript per Node.js e offrire
 
 ### Stato del turno in elaborazione alla riapertura
 
-Quando la famiglia consulta tramite un client della chat testuale una conversazione con un turno testuale accettato il cui esito non è ancora conservato, Ambrogio deve mostrare quel turno come «In elaborazione»; a una nuova consultazione dopo la conservazione dell'esito deve mostrare lo scambio concluso.
+Quando la famiglia consulta tramite un client della chat testuale una conversazione con un turno testuale accettato il cui esito non è ancora conservato, Ambrogio deve mostrare quel turno come «In elaborazione» («In progress» con l'interfaccia in inglese); a una nuova consultazione dopo la conservazione dell'esito deve mostrare lo scambio concluso.
 
 #### Metadata
   * type: requirement
 
 #### Relations
+  * satisfiedBy: [tui.ts](../../src/tui.ts)
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
+### Testi del client terminale nella lingua dell'interfaccia
+
+Mentre il client è attivo, il client deve presentare nella lingua dell'interfaccia stabilita all'avvio ogni testo prodotto dal client stesso, compresi indicazioni d'uso, messaggi di avvio, etichette e comandi della schermata, stati, errori locali e nome leggibile inviato al backend, e deve mostrare senza traduzione i testi ricevuti dal backend, come risposte e messaggi pubblici di errore o rifiuto.
+
+#### Metadata
+  * type: requirement
+
+#### Relations
+  * satisfiedBy: [backend.ts](../../src/backend.ts)
+  * satisfiedBy: [cli.ts](../../src/cli.ts)
+  * satisfiedBy: [i18n.ts](../../src/i18n.ts)
   * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---

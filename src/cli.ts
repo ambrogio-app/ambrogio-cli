@@ -1,49 +1,57 @@
 import { hostname } from 'node:os';
 import { argv, env, stderr, stdin, stdout } from 'node:process';
 import { backendUrl, type ClientIdentity } from './backend.js';
+import { interfaceLanguage, texts, type Texts } from './i18n.js';
 import { runTerminalChat } from './tui.js';
 
-function usage(): string {
-  return 'Uso: npm start -- --server http://host:porta [--client-id identificativo]\n'
-    + 'Oppure imposta AMBROGIO_URL e AMBROGIO_CLIENT_ID.\n';
-}
+type Options = { server?: string; clientId?: string; language?: string };
 
-type Options = { server?: string; clientId?: string };
+const names: Record<string, keyof Options> = { '--server': 'server', '--client-id': 'clientId', '--language': 'language' };
 
-function options(args: string[]): Options {
-  if (args.includes('--help') || args.includes('-h')) {
-    stdout.write(usage());
-    process.exit(0);
-  }
+/** Parsed options, or `undefined` when they are malformed. */
+function options(args: string[]): Options | undefined {
   const parsed: Options = {};
   for (let index = 0; index < args.length; index += 2) {
-    const name = args[index];
+    const key = names[args[index] ?? ''];
     const value = args[index + 1];
-    const key = name === '--server' ? 'server' : name === '--client-id' ? 'clientId' : undefined;
-    if (!key || value === undefined || parsed[key] !== undefined) throw new Error(`Opzioni non valide.\n${usage()}`);
+    if (!key || value === undefined || parsed[key] !== undefined) return undefined;
     parsed[key] = value;
   }
   return parsed;
 }
 
-function serverArgument(parsed: Options, environment: NodeJS.ProcessEnv): string {
+/** The value given to `--language`, if any, even when the other options are malformed. */
+function languageArgument(args: string[]): string | undefined {
+  const index = args.indexOf('--language');
+  return index >= 0 ? args[index + 1] : undefined;
+}
+
+function serverArgument(parsed: Options, environment: NodeJS.ProcessEnv, t: Texts): string {
   const value = parsed.server ?? environment.AMBROGIO_URL;
-  if (!value) throw new Error(`Indica l’URL del backend.\n${usage()}`);
+  if (!value) throw new Error(`${t.missingUrl}\n${t.usage}`);
   return value;
 }
 
-function clientIdentity(parsed: Options, environment: NodeJS.ProcessEnv, host = hostname()): ClientIdentity {
+function clientIdentity(parsed: Options, environment: NodeJS.ProcessEnv, t: Texts, host = hostname()): ClientIdentity {
   const clientId = parsed.clientId ?? environment.AMBROGIO_CLIENT_ID ?? `cli-${host}`;
-  if (!clientId.trim()) throw new Error(`L’identificativo del client non può essere vuoto.\n${usage()}`);
-  return { clientId, name: `Terminale ${host}` };
+  if (!clientId.trim()) throw new Error(`${t.emptyClientId}\n${t.usage}`);
+  return { clientId, name: t.clientName(host) };
 }
 
+const args = argv.slice(2);
+const choice = interfaceLanguage(languageArgument(args), env);
+const t = texts[choice.language];
 try {
-  const parsed = options(argv.slice(2));
-  const url = backendUrl(serverArgument(parsed, env));
-  const identity = clientIdentity(parsed, env);
-  if (!stdin.isTTY || !stdout.isTTY) throw new Error('Apri il client in un terminale interattivo.');
-  await runTerminalChat(url, identity);
+  if (args.includes('--help') || args.includes('-h')) {
+    stdout.write(t.usage);
+    process.exit(0);
+  }
+  const parsed = options(args);
+  if (!parsed || choice.invalid) throw new Error(`${t.invalidOptions}\n${t.usage}`);
+  const url = backendUrl(serverArgument(parsed, env, t), t);
+  const identity = clientIdentity(parsed, env, t);
+  if (!stdin.isTTY || !stdout.isTTY) throw new Error(t.notInteractive);
+  await runTerminalChat(url, identity, t);
 } catch (error) {
   stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
   process.exitCode = 2;

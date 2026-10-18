@@ -4,6 +4,8 @@ import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { test } from 'node:test';
 import { hostname } from 'node:os';
+import { readFile } from 'node:fs/promises';
+import { interfaceLanguage, systemLanguage, texts, type Language, type Texts } from '../src/i18n.js';
 import { startFakeBackend } from './fake-backend.js';
 
 const executable = new URL('../src/cli.js', import.meta.url).pathname.replace('/test/', '/src/');
@@ -17,7 +19,7 @@ async function until(check: () => boolean, details: () => string): Promise<void>
 }
 
 test('l’avvio richiede un URL esplicito', async () => {
-  const child = spawn(process.execPath, [executable], { env: { ...process.env, AMBROGIO_URL: '' } });
+  const child = spawn(process.execPath, [executable], { env: { ...process.env, AMBROGIO_URL: '', AMBROGIO_LANGUAGE: 'it' } });
   let error = '';
   child.stderr.setEncoding('utf8').on('data', chunk => { error += chunk; });
   const [code] = await once(child, 'exit');
@@ -57,7 +59,7 @@ test('la chat resta aperta tra due turni e la barra laterale usa le anteprime HT
   });
   const command = `stty cols 100 rows 30; exec ${process.execPath} ${executable} --server ${fake.url}`;
   const child = spawn('script', ['-qef', '-E', 'never', '-c', command, '/dev/null'],
-    { env: { ...process.env, SHELL: '/bin/sh', TERM: 'xterm-256color' } });
+    { env: { ...process.env, SHELL: '/bin/sh', TERM: 'xterm-256color', AMBROGIO_LANGUAGE: 'it' } });
   let output = '';
   child.stdout.setEncoding('utf8').on('data', chunk => { output += chunk; });
   try {
@@ -109,11 +111,12 @@ async function helloOf(args: string[], environment: Record<string, string>) {
   const quoted = args.map(arg => `'${arg}'`).join(' ');
   const command = `stty cols 100 rows 30; exec ${process.execPath} ${executable} --server ${fake.url} ${quoted}`;
   const child = spawn('script', ['-qef', '-E', 'never', '-c', command, '/dev/null'],
-    { env: { ...withoutClientId(), ...environment, SHELL: '/bin/sh', TERM: 'xterm-256color' } });
+    { env: { ...withoutClientId(), AMBROGIO_LANGUAGE: 'it', ...environment, SHELL: '/bin/sh', TERM: 'xterm-256color' } });
   let output = '';
   child.stdout.setEncoding('utf8').on('data', chunk => { output += chunk; });
   try {
-    await until(() => output.includes('Nuova chat'), () => `schermata iniziale; ${output.slice(-300)}`);
+    await until(() => output.includes('Nuova chat') || output.includes('New chat'),
+      () => `schermata iniziale; ${output.slice(-300)}`);
     child.stdin.write('ciao\r');
     await until(() => fake.hellos.length === 1, () => 'session.hello');
     child.stdin.write('\u0011');
@@ -130,13 +133,15 @@ test('l’identità del client usa il nome host, la variabile e l’opzione', as
   const name = `Terminale ${hostname()}`;
   const defaultHello = await helloOf([], {});
   assert.deepEqual(defaultHello, { type: 'session.hello', clientId: `cli-${hostname()}`, name });
+  assert.deepEqual(await helloOf([], { AMBROGIO_LANGUAGE: 'en' }),
+    { type: 'session.hello', clientId: `cli-${hostname()}`, name: `Terminal ${hostname()}` });
   assert.deepEqual(await helloOf([], { AMBROGIO_CLIENT_ID: 'cucina-tavolo' }),
     { type: 'session.hello', clientId: 'cucina-tavolo', name });
   assert.deepEqual(await helloOf(['--client-id', 'studio'], { AMBROGIO_CLIENT_ID: 'cucina-tavolo' }),
     { type: 'session.hello', clientId: 'studio', name });
   for (const [args, environment] of [[['--client-id', ''], {}], [[], { AMBROGIO_CLIENT_ID: '  ' }]] as const) {
     const child = spawn(process.execPath, [executable, '--server', 'http://127.0.0.1:9', ...args],
-      { env: { ...withoutClientId(), ...environment } });
+      { env: { ...withoutClientId(), AMBROGIO_LANGUAGE: 'it', ...environment } });
     let error = '';
     child.stderr.setEncoding('utf8').on('data', chunk => { error += chunk; });
     const [code] = await once(child, 'exit');
@@ -171,7 +176,7 @@ test('la barra laterale carica altre chat e aggiorna dalla prima pagina', async 
   assert(address && typeof address !== 'string');
   const command = `stty cols 100 rows 30; exec ${process.execPath} ${executable} --server http://127.0.0.1:${address.port}`;
   const child = spawn('script', ['-qef', '-E', 'never', '-c', command, '/dev/null'],
-    { env: { ...process.env, SHELL: '/bin/sh', TERM: 'xterm-256color' } });
+    { env: { ...process.env, SHELL: '/bin/sh', TERM: 'xterm-256color', AMBROGIO_LANGUAGE: 'it' } });
   let output = '';
   child.stdout.setEncoding('utf8').on('data', chunk => { output += chunk; });
   try {
@@ -212,7 +217,7 @@ test('una chat riaperta passa da in elaborazione a risposta dopo aggiornamento m
   } });
   const command = `stty cols 100 rows 30; exec ${process.execPath} ${executable} --server ${fake.url}`;
   const child = spawn('script', ['-qef', '-E', 'never', '-c', command, '/dev/null'],
-    { env: { ...process.env, SHELL: '/bin/sh', TERM: 'xterm-256color' } });
+    { env: { ...process.env, SHELL: '/bin/sh', TERM: 'xterm-256color', AMBROGIO_LANGUAGE: 'it' } });
   let output = '';
   child.stdout.setEncoding('utf8').on('data', chunk => { output += chunk; });
   try {
@@ -229,6 +234,145 @@ test('una chat riaperta passa da in elaborazione a risposta dopo aggiornamento m
     const [code] = await once(child, 'exit');
     assert.equal(code, 0);
     assert.equal(fake.starts().length, 0, 'refreshing does not send a turn');
+  } finally {
+    child.kill();
+    await fake.close();
+  }
+});
+
+// Verification: Prova della lingua dell'interfaccia del client terminale
+const contract = new URL('../../system-model/Contracts/TerminalConversation.md', import.meta.url);
+
+function cleanEnvironment(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
+  const { AMBROGIO_LANGUAGE: _l, AMBROGIO_URL: _u, LC_ALL: _a, LC_MESSAGES: _m, LANG: _g, ...rest } = process.env;
+  return { ...rest, ...extra };
+}
+
+test('la lingua segue opzione, variabile e poi la lingua del sistema', () => {
+  assert.deepEqual(interfaceLanguage('en', { AMBROGIO_LANGUAGE: 'it' }), { language: 'en', invalid: false });
+  assert.deepEqual(interfaceLanguage('it', { AMBROGIO_LANGUAGE: 'xx' }), { language: 'it', invalid: false });
+  assert.deepEqual(interfaceLanguage(undefined, { AMBROGIO_LANGUAGE: 'it', LANG: 'en_US.UTF-8' }),
+    { language: 'it', invalid: false });
+  assert.deepEqual(interfaceLanguage(undefined, { AMBROGIO_LANGUAGE: '', LANG: 'it_IT.UTF-8' }),
+    { language: 'it', invalid: false });
+  assert.deepEqual(interfaceLanguage('de', { LANG: 'it_IT.UTF-8' }), { language: 'it', invalid: true });
+  assert.deepEqual(interfaceLanguage('de', { AMBROGIO_LANGUAGE: 'en', LANG: 'it_IT.UTF-8' }),
+    { language: 'en', invalid: true });
+  assert.deepEqual(interfaceLanguage(undefined, { AMBROGIO_LANGUAGE: 'IT', LANG: 'it_IT.UTF-8' }),
+    { language: 'it', invalid: true });
+  assert.equal(systemLanguage({}), 'en');
+  assert.equal(systemLanguage({ LANG: 'C' }), 'en');
+  assert.equal(systemLanguage({ LANG: 'POSIX' }), 'en');
+  assert.equal(systemLanguage({ LANG: 'it' }), 'it');
+  assert.equal(systemLanguage({ LANG: 'en_GB.UTF-8' }), 'en');
+  assert.equal(systemLanguage({ LC_ALL: 'C.UTF-8', LANG: 'it_IT.UTF-8' }), 'en');
+  assert.equal(systemLanguage({ LC_ALL: '', LC_MESSAGES: 'it_IT.UTF-8', LANG: 'en_US.UTF-8' }), 'it');
+  assert.equal(systemLanguage({ LANGUAGE: 'it', LANG: 'en_US.UTF-8' }), 'en');
+});
+
+function rendered(catalogue: Texts): string[] {
+  return Object.values(catalogue).flatMap(value => {
+    if (typeof value === 'string') return [value];
+    const text = (value as (placeholder: unknown) => string)('<placeholder>');
+    return [text];
+  }).flatMap(text => text.split('\n')).filter(line => line !== '');
+}
+
+async function contractSegments(): Promise<Record<Language, string[]>> {
+  const markdown = await readFile(contract, 'utf8');
+  const section = markdown.split('### Catalogo dei testi del client terminale')[1]?.split('#### Metadata')[0] ?? '';
+  const segments: Record<Language, string[]> = { it: [], en: [] };
+  for (const row of section.split('\n').filter(line => line.startsWith('| ') && !line.startsWith('| Uso '))) {
+    const cells = row.split(/(?<!\\)\|/).slice(1, -1);
+    const backticked = (cell: string) => [...cell.matchAll(/`([^`]+)`/g)].map(match => match[1]!.replaceAll('\\|', '|'));
+    segments.it.push(...backticked(cells[1] ?? ''));
+    segments.en.push(...backticked(cells[2] ?? ''));
+  }
+  return segments;
+}
+
+test('il catalogo del codice coincide con il contratto nelle due lingue', async () => {
+  assert.deepEqual(Object.keys(texts.it), Object.keys(texts.en));
+  const segments = await contractSegments();
+  for (const language of ['it', 'en'] as const) {
+    const placeholders = (line: string) => line.replace(/<placeholder>/g, '<?>');
+    const expected = segments[language].map(segment => segment.replace(/<(host|testo|dettaglio|n)>/g, '<?>'));
+    const lines = rendered(texts[language]).map(placeholders);
+    for (const line of lines) assert(expected.includes(line), `${language}: «${line}» is not in the contract`);
+    const fallback = texts[language].protocolError(undefined);
+    for (const segment of expected) {
+      assert(lines.includes(segment) || fallback.endsWith(segment), `${language}: «${segment}» is not in the code`);
+    }
+  }
+});
+
+async function runCli(args: string[], environment: NodeJS.ProcessEnv) {
+  const child = spawn(process.execPath, [executable, ...args], { env: environment });
+  let output = '';
+  let error = '';
+  child.stdout.setEncoding('utf8').on('data', chunk => { output += chunk; });
+  child.stderr.setEncoding('utf8').on('data', chunk => { error += chunk; });
+  const [code] = await once(child, 'exit');
+  return { code, output, error };
+}
+
+test('l’avvio usa la lingua scelta e rifiuta una lingua non supportata', async () => {
+  let result = await runCli(['--language', 'xx'], cleanEnvironment({ AMBROGIO_LANGUAGE: 'en' }));
+  assert.equal(result.code, 2);
+  assert.equal(result.error, `Invalid options.\n${texts.en.usage}\n`);
+  result = await runCli([], cleanEnvironment({ AMBROGIO_LANGUAGE: 'de', LANG: 'it_IT.UTF-8' }));
+  assert.equal(result.code, 2);
+  assert.equal(result.error, `Opzioni non valide.\n${texts.it.usage}\n`);
+  result = await runCli([], cleanEnvironment({ LANG: 'en_US.UTF-8' }));
+  assert.equal(result.code, 2);
+  assert.match(result.error, /^Specify the backend URL\.\nUsage:/);
+  result = await runCli([], cleanEnvironment({ LANG: 'it_IT.UTF-8' }));
+  assert.match(result.error, /^Indica l’URL del backend\.\nUso:/);
+  result = await runCli([], cleanEnvironment());
+  assert.match(result.error, /^Specify the backend URL\./);
+  result = await runCli(['--language', 'it'], cleanEnvironment({ AMBROGIO_LANGUAGE: 'en' }));
+  assert.match(result.error, /^Indica l’URL del backend\./);
+  result = await runCli(['--help', '--language', 'en'], cleanEnvironment({ LANG: 'it_IT.UTF-8' }));
+  assert.equal(result.code, 0);
+  assert.equal(result.output, texts.en.usage);
+  result = await runCli(['--help'], cleanEnvironment({ AMBROGIO_LANGUAGE: 'it' }));
+  assert.equal(result.output, texts.it.usage);
+});
+
+test('la schermata in inglese mostra i testi inglesi e il messaggio del backend invariato', async () => {
+  const fake = await startFakeBackend({
+    onTurn(turn) {
+      turn.send({ type: 'turn.rejected', requestId: turn.requestId, reason: 'occupied',
+        message: 'Conversazione occupata.' });
+    },
+    http(_request, response) {
+      response.setHeader('Content-Type', 'application/json');
+      response.end(JSON.stringify({ items: [], nextCursor: null }));
+    },
+  });
+  const command = `stty cols 100 rows 30; exec ${process.execPath} ${executable} --server ${fake.url}`;
+  const child = spawn('script', ['-qef', '-E', 'never', '-c', command, '/dev/null'],
+    { env: cleanEnvironment({ LANG: 'en_US.UTF-8', SHELL: '/bin/sh', TERM: 'xterm-256color' }) });
+  let output = '';
+  child.stdout.setEncoding('utf8').on('data', chunk => { output += chunk; });
+  const waitFor = async (check: () => boolean, what: string) => {
+    const deadline = Date.now() + 7000;
+    while (!check()) {
+      if (Date.now() > deadline) throw new Error(`Timed out: ${what}; ${output.slice(-400)}`);
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
+  };
+  try {
+    await waitFor(() => output.includes('New chat') && output.includes('^Q quit')
+      && output.includes('Type a message and press Enter'), 'English screen');
+    child.stdin.write('hello\r');
+    await waitFor(() => output.includes('Error: Conversazione occupata.'), 'backend message');
+    await waitFor(() => output.includes('The turn ended with an error.'), 'English status');
+    assert.doesNotMatch(output, /Nuova chat|Scrivi un messaggio|Errore:/);
+    assert.equal(fake.hellos[0]?.name, `Terminal ${hostname()}`);
+    child.stdin.write('\u0011');
+    const [code] = await once(child, 'exit');
+    assert.equal(code, 0);
   } finally {
     child.kill();
     await fake.close();

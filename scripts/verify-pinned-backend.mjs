@@ -14,6 +14,7 @@ const actualCommit = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { en
 assert.equal(actualCommit, expectedCommit, 'Il backend locale deve essere al commit dichiarato nel contratto del client.');
 const { startConversationServer } = await import(pathToFileURL(`${root}/apps/server/dist/runtime/conversation-server.js`));
 const { AmbrogioBackend, backendUrl } = await import(pathToFileURL(`${cli}/dist/src/backend.js`));
+const { texts } = await import(pathToFileURL(`${cli}/dist/src/i18n.js`));
 const identity = { clientId: 'cli-verifica', name: 'Terminale verifica' };
 const text = value => ({ kind: 'text', text: value });
 const expectation = expectsReply => ({ kind: 'reply_expectation', expectsReply });
@@ -54,7 +55,7 @@ try {
   const origin = `http://127.0.0.1:${port}`;
   const command = `stty cols 100 rows 30; exec ${process.execPath} ${cli}/dist/src/cli.js --server ${origin}`;
   child = spawn('script', ['-qef', '-E', 'never', '-c', command, '/dev/null'],
-    { cwd: cli, env: { ...process.env, SHELL: '/bin/sh', TERM: 'xterm-256color', AMBROGIO_URL: '' } });
+    { cwd: cli, env: { ...process.env, SHELL: '/bin/sh', TERM: 'xterm-256color', AMBROGIO_URL: '', AMBROGIO_LANGUAGE: 'it' } });
   let output = '';
   let errors = '';
   child.stdout.setEncoding('utf8').on('data', chunk => { output += chunk; });
@@ -66,7 +67,7 @@ try {
       await new Promise(resolve => setTimeout(resolve, 25));
     }
   }
-  const client = new AmbrogioBackend(backendUrl(origin), identity);
+  const client = new AmbrogioBackend(backendUrl(origin, texts.it), identity, texts.it);
   await until(() => output.includes('Nuova chat'), 'nuova chat iniziale');
   child.stdin.write('ciao\r');
   let conversationId;
@@ -113,7 +114,7 @@ try {
   assert.deepEqual(await client.send('ciao', 'inesistente', () => {}),
     { status: 'failed', conversationId: 'inesistente', error: 'Conversazione non trovata.' });
 
-  const other = new AmbrogioBackend(backendUrl(origin), { clientId: 'cli-altro', name: 'Terminale altro' });
+  const other = new AmbrogioBackend(backendUrl(origin, texts.it), { clientId: 'cli-altro', name: 'Terminale altro' }, texts.it);
   const slowTurn = client.send('lento', conversation, () => {});
   let pending;
   for (let attempt = 0; attempt < 50; attempt += 1) {

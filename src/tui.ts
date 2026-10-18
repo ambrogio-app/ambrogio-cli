@@ -1,5 +1,6 @@
 import terminalKit from 'terminal-kit';
 import { AmbrogioBackend, type ClientIdentity, type Conversation, type ConversationItem, type TurnResult } from './backend.js';
+import type { Texts } from './i18n.js';
 
 // The document widgets in Terminal Kit 3 are absent from @types/terminal-kit.
 const kit: any = terminalKit;
@@ -15,17 +16,17 @@ function label(value: string, width = 52): string {
 
 function errorText(value: unknown): string { return value instanceof Error ? value.message : String(value); }
 
-export async function runTerminalChat(url: URL, identity: ClientIdentity): Promise<void> {
-  const backend = new AmbrogioBackend(url, identity);
+export async function runTerminalChat(url: URL, identity: ClientIdentity, t: Texts): Promise<void> {
+  const backend = new AmbrogioBackend(url, identity, t);
   const entries: Entry[] = [];
   let currentId: string | null = null;
-  let currentLabel = 'Nuova chat';
+  let currentLabel = t.newChat;
   let history: Conversation | null = null;
   let localTurn: LocalTurn | null = null;
   let nextCursor: string | null = null;
   let busy = false;
   let closed = false;
-  let status = 'Caricamento conversazioni…';
+  let status = t.loading;
   let doc: any;
   let menu: any;
   let chat: any;
@@ -45,23 +46,23 @@ export async function runTerminalChat(url: URL, identity: ClientIdentity): Promi
   function conversationText(): string {
     const lines: string[] = [];
     for (const turn of history?.turns ?? []) {
-      lines.push(`Tu: ${turn.text}`);
+      lines.push(t.you(turn.text));
       switch (turn.status) {
-        case 'pending': lines.push('Ambrogio: In elaborazione. Aggiorna manualmente più tardi.'); break;
+        case 'pending': lines.push(t.pendingReopened); break;
         case 'answered': lines.push(`Ambrogio: ${turn.answer}`); break;
-        case 'failed': lines.push(`Errore: ${turn.error}`); break;
-        case 'interrupted': lines.push('Risposta interrotta.'); break;
+        case 'failed': lines.push(t.error(turn.error ?? '')); break;
+        case 'interrupted': lines.push(t.interruptedStored); break;
       }
       lines.push('');
     }
     if (localTurn) {
-      lines.push(`Tu: ${localTurn.text}`);
-      if (localTurn.status === 'streaming') lines.push(`Ambrogio: ${localTurn.answer || 'In elaborazione…'}`);
+      lines.push(t.you(localTurn.text));
+      if (localTurn.status === 'streaming') lines.push(localTurn.answer ? `Ambrogio: ${localTurn.answer}` : t.streaming);
       else if (localTurn.status === 'answered') lines.push(`Ambrogio: ${localTurn.answer}`);
-      else if (localTurn.status === 'failed') lines.push(`Errore: ${localTurn.answer}`);
-      else lines.push('Risposta interrotta. Aggiorna manualmente più tardi.');
+      else if (localTurn.status === 'failed') lines.push(t.error(localTurn.answer));
+      else lines.push(t.interruptedLocal);
     }
-    return lines.join('\n') || 'Scrivi un messaggio per iniziare questa chat.';
+    return lines.join('\n') || t.emptyChat;
   }
 
   function renderChat(): void {
@@ -114,7 +115,7 @@ export async function runTerminalChat(url: URL, identity: ClientIdentity): Promi
     menu = chat = input = header = statusBox = undefined;
     if (term.width < 70 || term.height < 14) {
       new kit.TextBox({ parent: doc, x: 1, y: 1, width: Math.max(1, term.width - 2), height: 3,
-        content: 'Allarga il terminale ad almeno 70 colonne e 14 righe.\nLa chat corrente resta aperta.' });
+        content: t.terminalTooSmall });
       return;
     }
     side = Math.min(34, Math.max(24, Math.floor(term.width * 0.29)));
@@ -133,17 +134,17 @@ export async function runTerminalChat(url: URL, identity: ClientIdentity): Promi
       lineWrap: true, wordWrap: true });
     chat.scrollToBottom();
     new kit.TextBox({ parent: doc, x: right, y: term.height - 4, width: rightWidth,
-      height: 1, content: 'Scrivi un messaggio e premi Invio', textAttr: { color: 'gray' } });
+      height: 1, content: t.inputLabel, textAttr: { color: 'gray' } });
     input = new kit.InlineInput({ parent: doc, x: right, y: term.height - 3,
-      width: rightWidth, value, placeholder: 'Messaggio…', noEmpty: true,
+      width: rightWidth, value, placeholder: t.inputPlaceholder, noEmpty: true,
       keyBindings: { ...kit.InlineInput.prototype.keyBindings, TAB: undefined, CTRL_R: undefined },
     });
     input.on('submit', (text: string) => { void send(text); });
     new kit.TextBox({ parent: doc, x: 1, y: term.height - 3, width: side - 2,
-      height: 1, content: '↑↓ scegli · Invio apri',
+      height: 1, content: t.sideKeys,
       textAttr: { color: 'gray' } });
     new kit.TextBox({ parent: doc, x: 1, y: term.height - 1, width: term.width - 2,
-      height: 1, content: ' Tab pannelli · ^N nuova · ^R aggiorna · ^L altre · ^Q esci',
+      height: 1, content: t.keys,
       textAttr: { color: 'gray' } });
     renderMenu(sideFocused);
     if (!sideFocused) doc.giveFocusTo(input);
@@ -175,11 +176,11 @@ export async function runTerminalChat(url: URL, identity: ClientIdentity): Promi
         if (!entries.some(entry => entry.id === item.id)) entries.push({ id: item.id, label: item.id.slice(0, 8) });
       }
       nextCursor = page.nextCursor;
-      status = more ? 'Altre conversazioni caricate.' : 'Conversazioni aggiornate.';
+      status = more ? t.moreLoaded : t.listRefreshed;
       renderMenu();
       renderStatus();
       await loadPreviews(page.items);
-    } catch (error) { status = `Errore elenco: ${errorText(error)}`; renderStatus(); }
+    } catch (error) { status = t.listError(errorText(error)); renderStatus(); }
   }
 
   async function openChat(id: string): Promise<void> {
@@ -191,18 +192,18 @@ export async function runTerminalChat(url: URL, identity: ClientIdentity): Promi
       currentLabel = label(detail.turns[0]?.text ?? id.slice(0, 8));
       history = detail;
       localTurn = null;
-      status = 'Chat aperta.';
+      status = t.chatOpened;
       buildScreen('', true);
-    } catch (error) { status = `Errore apertura: ${errorText(error)}`; renderStatus(); }
+    } catch (error) { status = t.openError(errorText(error)); renderStatus(); }
   }
 
   function newChat(): void {
     if (busy) return;
     currentId = null;
-    currentLabel = 'Nuova chat';
+    currentLabel = t.newChat;
     history = null;
     localTurn = null;
-    status = 'Nuova chat pronta.';
+    status = t.newChatReady;
     buildScreen('', true);
   }
 
@@ -215,7 +216,7 @@ export async function runTerminalChat(url: URL, identity: ClientIdentity): Promi
     if (!target) currentLabel = label(text);
     header?.setContent(label(currentLabel, term.width - side - 4));
     localTurn = { text, answer: '', status: 'streaming' };
-    status = 'Ambrogio sta rispondendo…';
+    status = t.answering;
     renderMenu(); renderChat(); renderStatus();
     try {
       const result: TurnResult = await backend.send(text, target, delta => {
@@ -232,15 +233,15 @@ export async function runTerminalChat(url: URL, identity: ClientIdentity): Promi
         localTurn.status = result.status;
         localTurn.answer = result.status === 'interrupted' ? '' : result.status === 'answered' ? result.answer : result.error;
       }
-      status = result.status === 'answered' ? 'Risposta conservata.' :
-        result.status === 'failed' ? 'Il turno è terminato con errore.' : 'Risposta interrotta. Aggiorna manualmente.';
+      status = result.status === 'answered' ? t.answerSaved :
+        result.status === 'failed' ? t.turnFailed : t.turnInterrupted;
       if (currentId) {
         try { history = await backend.history(currentId); localTurn = null; }
         catch { /* Keep the local outcome until manual refresh. */ }
       }
     } catch (error) {
       if (localTurn) { localTurn.status = 'failed'; localTurn.answer = errorText(error); }
-      status = 'Invio non riuscito.';
+      status = t.sendFailed;
     } finally {
       busy = false;
       if (closed) return;

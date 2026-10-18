@@ -11,6 +11,90 @@ La prima versione utilizzabile si avvia dal checkout del repository mediante npm
   * define: [Stack del client terminale](../Requirements/TerminalConversation.md#stack-del-client-terminale)
 ---
 
+### Catalogo dei testi del client terminale
+
+Decisione concordata con la persona il 18 ottobre 2026: ogni testo prodotto dal client esiste in italiano e in inglese con la formulazione esatta indicata qui; il codice raccoglie il catalogo in un solo modulo e i due elenchi hanno le stesse voci. I segnaposto fra parentesi angolari sono sostituiti dal valore effettivo: `<host>` dal nome host, `<n>` dal codice HTTP, `<dettaglio>` dal messaggio dell'errore locale o pubblico, `<testo>` dal testo del turno della persona. Le righe dell'indicazione d'uso terminano con un a capo. Il titolo « AMBROGIO · Chat» e il prefisso «Ambrogio: » sono identici nelle due lingue. Testi, risposte e messaggi pubblici ricevuti dal backend non fanno parte del catalogo e non sono tradotti.
+
+**Avvio e identità**
+
+| Uso | Italiano | Inglese |
+|---|---|---|
+| Indicazione d'uso, prima riga | `Uso: npm start -- --server http://host:porta [--client-id identificativo] [--language it\|en]` | `Usage: npm start -- --server http://host:port [--client-id identifier] [--language it\|en]` |
+| Indicazione d'uso, seconda riga | `Oppure imposta AMBROGIO_URL, AMBROGIO_CLIENT_ID e AMBROGIO_LANGUAGE.` | `Or set AMBROGIO_URL, AMBROGIO_CLIENT_ID and AMBROGIO_LANGUAGE.` |
+| Opzioni o lingua non valide | `Opzioni non valide.` | `Invalid options.` |
+| URL del backend assente | `Indica l’URL del backend.` | `Specify the backend URL.` |
+| Identificativo vuoto | `L’identificativo del client non può essere vuoto.` | `The client identifier must not be empty.` |
+| Terminale non interattivo | `Apri il client in un terminale interattivo.` | `Open the client in an interactive terminal.` |
+| Nome inviato con `session.hello` | `Terminale <host>` | `Terminal <host>` |
+
+**Schermata**
+
+| Uso | Italiano | Inglese |
+|---|---|---|
+| Voce della nuova chat | `Nuova chat` | `New chat` |
+| Stato iniziale | `Caricamento conversazioni…` | `Loading conversations…` |
+| Chat vuota | `Scrivi un messaggio per iniziare questa chat.` | `Write a message to start this chat.` |
+| Terminale troppo piccolo | `Allarga il terminale ad almeno 70 colonne e 14 righe.` e, a capo, `La chat corrente resta aperta.` | `Enlarge the terminal to at least 70 columns and 14 rows.` and, on a new line, `The current chat stays open.` |
+| Etichetta del campo di scrittura | `Scrivi un messaggio e premi Invio` | `Type a message and press Enter` |
+| Segnaposto del campo di scrittura | `Messaggio…` | `Message…` |
+| Comandi della barra laterale | `↑↓ scegli · Invio apri` | `↑↓ select · Enter open` |
+| Comandi generali | ` Tab pannelli · ^N nuova · ^R aggiorna · ^L altre · ^Q esci` | ` Tab panels · ^N new · ^R refresh · ^L more · ^Q quit` |
+
+**Conversazione**
+
+| Uso | Italiano | Inglese |
+|---|---|---|
+| Turno della persona | `Tu: <testo>` | `You: <testo>` |
+| Turno in elaborazione alla riapertura | `Ambrogio: In elaborazione. Aggiorna manualmente più tardi.` | `Ambrogio: In progress. Refresh manually later.` |
+| Risposta in generazione senza frammenti | `Ambrogio: In elaborazione…` | `Ambrogio: In progress…` |
+| Esito di errore | `Errore: <dettaglio>` | `Error: <dettaglio>` |
+| Turno interrotto nello storico | `Risposta interrotta.` | `Response interrupted.` |
+| Turno interrotto localmente | `Risposta interrotta. Aggiorna manualmente più tardi.` | `Response interrupted. Refresh manually later.` |
+
+**Stati**
+
+| Uso | Italiano | Inglese |
+|---|---|---|
+| Elenco aggiornato | `Conversazioni aggiornate.` | `Conversations refreshed.` |
+| Pagina successiva caricata | `Altre conversazioni caricate.` | `More conversations loaded.` |
+| Elenco non disponibile | `Errore elenco: <dettaglio>` | `List error: <dettaglio>` |
+| Chat aperta | `Chat aperta.` | `Chat opened.` |
+| Apertura non riuscita | `Errore apertura: <dettaglio>` | `Error opening chat: <dettaglio>` |
+| Nuova chat | `Nuova chat pronta.` | `New chat ready.` |
+| Turno in corso | `Ambrogio sta rispondendo…` | `Ambrogio is answering…` |
+| Turno riuscito | `Risposta conservata.` | `Answer saved.` |
+| Turno fallito | `Il turno è terminato con errore.` | `The turn ended with an error.` |
+| Turno interrotto | `Risposta interrotta. Aggiorna manualmente.` | `Response interrupted. Refresh manually.` |
+| Invio fallito | `Invio non riuscito.` | `Sending failed.` |
+
+**Errori locali**
+
+| Uso | Italiano | Inglese |
+|---|---|---|
+| URL non analizzabile | `URL del backend non valido.` | `Invalid backend URL.` |
+| URL non ammesso | `L’URL del backend deve essere HTTP(S), senza credenziali, query o frammento.` | `The backend URL must be HTTP(S), without credentials, query or fragment.` |
+| Corpo non JSON | `Risposta JSON del backend non valida.` | `Invalid JSON response from the backend.` |
+| Errore HTTP senza messaggio pubblico | `Errore HTTP <n>.` | `HTTP error <n>.` |
+| Elenco non valido | `Risposta dell’elenco non valida.` | `Invalid list response.` |
+| Voce dell'elenco non valida | `Voce dell’elenco non valida.` | `Invalid list entry.` |
+| Storico non valido | `Risposta dello storico non valida.` | `Invalid history response.` |
+| Turno dello storico non valido | `Turno dello storico non valido.` | `Invalid history turn.` |
+| Risposta del turno non valida | `Risposta del turno non valida.` | `Invalid turn answer.` |
+| Errore del turno non valido | `Errore del turno non valido.` | `Invalid turn error.` |
+| Sessione non aperta | `Impossibile collegarsi al backend.` | `Cannot connect to the backend.` |
+| `turn.failed` senza messaggio | `Errore del turno.` | `Turn error.` |
+| `turn.rejected` senza messaggio | `Turno rifiutato.` | `Turn rejected.` |
+| `session.error` per il turno | `Errore del protocollo: <dettaglio>`, con `messaggio non valido.` se manca il messaggio | `Protocol error: <dettaglio>`, with `invalid message.` if the message is missing |
+| Testo vuoto | `Scrivi un messaggio non vuoto.` | `Write a non-empty message.` |
+| Testo oltre 64 KiB | `Messaggio troppo grande (massimo 64 KiB).` | `Message too large (maximum 64 KiB).` |
+
+#### Metadata
+  * type: specification
+
+#### Relations
+  * define: [Testi del client terminale nella lingua dell'interfaccia](../Requirements/TerminalConversation.md#testi-del-client-terminale-nella-lingua-dellinterfaccia)
+---
+
 ### Contratti pubblici del backend Ambrogio
 
 Il backend `ambrogio-backend` è la fonte autorevole del protocollo conversazionale `ambrogio.v1` e delle rotte HTTP di consultazione. La versione di riferimento è il commit `58b0df420aee7c08280afd818ffcd0e82b060029` del backend. Per i turni si consultano i contratti `Sessione del protocollo Ambrogio v1`, `Trasmissione in ingresso del protocollo Ambrogio v1`, `Trasmissione in uscita del protocollo Ambrogio v1`, `Esiti del turno nel protocollo Ambrogio v1`, `Motivi di rifiuto del turno` ed `Errori ed estensioni del protocollo Ambrogio v1` nel [modello del protocollo del backend](https://github.com/ambrogio-app/ambrogio-backend/blob/58b0df420aee7c08280afd818ffcd0e82b060029/system-model/Contracts/ConversationProtocol.md), con la forma dei messaggi definita da [`protocol/ambrogio-v1.schema.json`](https://github.com/ambrogio-app/ambrogio-backend/blob/58b0df420aee7c08280afd818ffcd0e82b060029/protocol/ambrogio-v1.schema.json) alla stessa revisione. Per la consultazione si usano `Risposta HTTP dell'elenco conversazioni` e `Risposta HTTP dello storico conversazionale` nel [modello dei contratti del backend](https://github.com/ambrogio-app/ambrogio-backend/blob/58b0df420aee7c08280afd818ffcd0e82b060029/system-model/Contracts/FamilyConversation.md). Questa revisione sostituisce la precedente `c057ced962b37f7d605c675ffb6da44825d67496`, basata sul profilo SSE ora rimosso dal backend. Messaggi ed endpoint effettivi vanno verificati con prove di integrazione contro la revisione indicata, nelle quali il backend valida i messaggi con lo schema. Un cambiamento di contratto nel backend richiede revisione esplicita di questo modello e delle verifiche del client.
@@ -24,7 +108,7 @@ Il backend `ambrogio-backend` è la fonte autorevole del protocollo conversazion
 
 ### Identità del client terminale nella sessione
 
-Decisione concordata il 17 ottobre 2026: il `clientId` inviato con `session.hello` vale per impostazione predefinita `cli-<nome host>` e può essere sostituito con l'opzione di avvio `--client-id` o con la variabile `AMBROGIO_CLIENT_ID`; l'opzione prevale sulla variabile. Il `name` vale `Terminale <nome host>`. Un valore vuoto non è ammesso. L'identità serve al backend per distinguere i client nelle sessioni e resta stabile tra un avvio e l'altro sulla stessa macchina finché la configurazione non cambia.
+Decisione concordata il 17 ottobre 2026: il `clientId` inviato con `session.hello` vale per impostazione predefinita `cli-<nome host>` e può essere sostituito con l'opzione di avvio `--client-id` o con la variabile `AMBROGIO_CLIENT_ID`; l'opzione prevale sulla variabile. Il `name` vale `Terminale <nome host>` con l'interfaccia in italiano e `Terminal <nome host>` con l'interfaccia in inglese, secondo il catalogo dei testi del client deciso il 18 ottobre 2026. Un valore vuoto non è ammesso. L'identità serve al backend per distinguere i client nelle sessioni e resta stabile tra un avvio e l'altro sulla stessa macchina finché la configurazione non cambia; il `clientId` non dipende dalla lingua.
 
 #### Metadata
   * type: specification
@@ -63,9 +147,27 @@ Sono state considerate l'action ufficiale `gitleaks/gitleaks-action`, che richie
   * define: [Scansione dei segreti nella CI](../Requirements/TerminalConversation.md#scansione-dei-segreti-nella-ci)
 ---
 
+### Scelta della lingua del client terminale
+
+Decisione concordata con la persona il 18 ottobre 2026: l'interfaccia del client è disponibile in italiano (`it`) e in inglese (`en`). Sostituisce la scelta implicita della prima versione, in cui tutti i testi del client erano soltanto in italiano.
+
+La lingua si sceglie all'avvio con l'opzione `--language <it|en>` o con la variabile `AMBROGIO_LANGUAGE`; l'opzione prevale sulla variabile. Una variabile vuota equivale a una variabile assente. Un valore diverso da `it` o `en`, nell'opzione o nella variabile, è un'opzione non valida: l'avvio termina con codice `2`, il messaggio «Opzioni non valide.» e l'indicazione d'uso. Senza opzione né variabile, il client segue la lingua del sistema: considera il primo valore non vuoto fra `LC_ALL`, `LC_MESSAGES` e `LANG`; se inizia con `it` la lingua è l'italiano, altrimenti l'inglese, anche quando nessuna delle tre variabili è impostata o il valore è `C` o `POSIX`. La variabile GNU `LANGUAGE` non è considerata.
+
+Le indicazioni d'uso e i messaggi dell'avvio, compreso quello per una lingua non valida e la risposta a `--help`, usano la lingua stabilita senza il valore non valido: l'opzione o la variabile valide, altrimenti la lingua del sistema. La lingua resta la stessa per tutto il processo e non dipende dalla lingua configurata nel backend; i testi ricevuti dal backend sono mostrati così come arrivano.
+
+#### Alternative e conseguenze
+Sono state considerate un'opzione con valore predefinito inglese, allineato al backend, e un'opzione con valore predefinito italiano, che non cambiava il comportamento esistente. Seguire la lingua del sistema replica lo schema della chat web, che segue la lingua del browser con l'inglese come ripiego, e offre la lingua attesa senza configurazione; chi usa un sistema con lingua diversa dall'italiano ottiene l'inglese anche se il backend è configurato in italiano, e può scegliere esplicitamente con l'opzione o la variabile.
+
+#### Metadata
+  * type: specification
+
+#### Relations
+  * define: [Scelta della lingua dell'interfaccia del client terminale](../Requirements/TerminalConversation.md#scelta-della-lingua-dellinterfaccia-del-client-terminale)
+---
+
 ### Schermata conversazionale a due pannelli
 
-Il client usa Terminal Kit per una schermata interattiva persistente. All'avvio una voce locale «Nuova chat» è selezionata come prima voce; non crea una conversazione vuota sul backend. Quando il primo turno è inviato, la voce prende come nome l'anteprima del testo inviato e resta la chat corrente anche durante la risposta. La barra laterale a sinistra mostra le conversazioni paginabili con l'anteprima del primo messaggio della persona, ricavata dagli storici HTTP pubblici delle sole chat visibili. Se il recupero di uno storico fallisce, la voce resta selezionabile con ID abbreviato. Il pannello destro conserva lo storico della chat selezionata, la risposta in generazione e il campo di scrittura per tutta l'interazione; inviare un turno non torna a una schermata di menu. `Tab` sposta il focus tra barra laterale e campo di scrittura; nell'elenco le frecce cambiano selezione e `Invio` apre la chat. La schermata indica i comandi per nuova chat, aggiornamento manuale, pagina successiva e uscita. Al ridimensionamento del terminale il client ricalcola i pannelli; quando lo spazio non consente due pannelli leggibili chiede di allargare il terminale senza perdere la conversazione corrente.
+Il client usa Terminal Kit per una schermata interattiva persistente. All'avvio una voce locale «Nuova chat» («New chat» con l'interfaccia in inglese) è selezionata come prima voce; non crea una conversazione vuota sul backend. Quando il primo turno è inviato, la voce prende come nome l'anteprima del testo inviato e resta la chat corrente anche durante la risposta. La barra laterale a sinistra mostra le conversazioni paginabili con l'anteprima del primo messaggio della persona, ricavata dagli storici HTTP pubblici delle sole chat visibili. Se il recupero di uno storico fallisce, la voce resta selezionabile con ID abbreviato. Il pannello destro conserva lo storico della chat selezionata, la risposta in generazione e il campo di scrittura per tutta l'interazione; inviare un turno non torna a una schermata di menu. `Tab` sposta il focus tra barra laterale e campo di scrittura; nell'elenco le frecce cambiano selezione e `Invio` apre la chat. La schermata indica i comandi per nuova chat, aggiornamento manuale, pagina successiva e uscita. Al ridimensionamento del terminale il client ricalcola i pannelli; quando lo spazio non consente due pannelli leggibili chiede di allargare il terminale senza perdere la conversazione corrente. Le formulazioni di etichette, comandi, stati e avvisi della schermata nelle due lingue sono quelle del catalogo dei testi del client.
 
 #### Metadata
   * type: specification

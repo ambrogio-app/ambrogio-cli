@@ -3,6 +3,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { after, before, test } from 'node:test';
 import { once } from 'node:events';
 import { AmbrogioBackend, backendUrl, sessionUrl } from '../src/backend.js';
+import { texts } from '../src/i18n.js';
 import { startFakeBackend } from './fake-backend.js';
 
 type Handler = (request: IncomingMessage, response: ServerResponse) => void;
@@ -16,14 +17,14 @@ before(async () => {
   await once(server, 'listening');
   const address = server.address();
   assert(address && typeof address !== 'string');
-  base = backendUrl(`http://127.0.0.1:${address.port}`);
+  base = backendUrl(`http://127.0.0.1:${address.port}`, texts.it);
 });
 after(async () => { server.closeAllConnections(); server.close(); await once(server, 'close'); });
 
 test('URL esplicito e indirizzo del canale conversazionale', () => {
-  assert.throws(() => backendUrl('file:///tmp/server'), /HTTP/);
-  assert.equal(sessionUrl(backendUrl('http://casa.lan:3000/ambrogio')).href, 'ws://casa.lan:3000/ambrogio/api/session');
-  assert.equal(sessionUrl(backendUrl('https://casa.lan')).href, 'wss://casa.lan/api/session');
+  assert.throws(() => backendUrl('file:///tmp/server', texts.it), /HTTP/);
+  assert.equal(sessionUrl(backendUrl('http://casa.lan:3000/ambrogio', texts.it)).href, 'ws://casa.lan:3000/ambrogio/api/session');
+  assert.equal(sessionUrl(backendUrl('https://casa.lan', texts.it)).href, 'wss://casa.lan/api/session');
 });
 
 test('nuovo turno con identità, risposta progressiva e successo solo con turn.completed', async () => {
@@ -38,7 +39,7 @@ test('nuovo turno con identità, risposta progressiva e successo solo con turn.c
     await completed;
     turn.send({ type: 'turn.completed', turnId: 't1', expectsReply: true });
   } });
-  const backend = new AmbrogioBackend(backendUrl(fake.url), identity);
+  const backend = new AmbrogioBackend(backendUrl(fake.url, texts.it), identity, texts.it);
   try {
     const deltas: string[] = [];
     let settled = false;
@@ -84,7 +85,7 @@ test('rifiuto, errore dopo l’ammissione e interruzione concludono il turno con
       turn.send({ type: 'turn.completed', turnId: 't5', expectsReply: false });
     }
   } });
-  const backend = new AmbrogioBackend(backendUrl(fake.url), identity);
+  const backend = new AmbrogioBackend(backendUrl(fake.url, texts.it), identity, texts.it);
   try {
     assert.deepEqual(await backend.send('occupata', 'c1', () => {}),
       { status: 'failed', conversationId: 'c1', error: 'Un altro turno è in corso.' });
@@ -106,7 +107,7 @@ test('controlli locali del testo ed estensioni non supportate', async () => {
     turn.accept('c1', 't1');
     turn.send({ type: 'turn.completed', turnId: 't1', expectsReply: false });
   } });
-  const backend = new AmbrogioBackend(backendUrl(fake.url), identity);
+  const backend = new AmbrogioBackend(backendUrl(fake.url, texts.it), identity, texts.it);
   try {
     await assert.rejects(backend.send('   ', null, () => {}), /non vuoto/);
     await assert.rejects(backend.send('è'.repeat(32_769), null, () => {}), /64 KiB/);
@@ -136,7 +137,7 @@ test('elenco con cursore opaco e storico pending/answered', async () => {
         ] }));
     } else response.writeHead(404).end();
   };
-  const backend = new AmbrogioBackend(base, identity);
+  const backend = new AmbrogioBackend(base, identity, texts.it);
   const first = await backend.list();
   assert.equal(first.nextCursor, 'opaque');
   assert.deepEqual((await backend.list(first.nextCursor ?? undefined)).items, []);

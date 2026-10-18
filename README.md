@@ -15,7 +15,7 @@
 | **ambrogio-cli** (this one) | Terminal chat client |
 | [ambrogio-satellite](https://github.com/ambrogio-app/ambrogio-satellite) | Voice satellite with wake word, microphone and speaker |
 
-> Ambrogio is in early development and currently speaks Italian.
+> Ambrogio is in early development. This client's interface is in English or Italian.
 
 ## How it works
 
@@ -60,6 +60,8 @@ npm start -- --server http://my-ambrogio:3000
 ```
 
 You can also set the server with `AMBROGIO_URL`, and the client ID with `--client-id` or `AMBROGIO_CLIENT_ID`. There is no default server URL.
+
+The interface language is `--language it|en` or `AMBROGIO_LANGUAGE`. Without them, the client follows the system locale (`LC_ALL`, `LC_MESSAGES`, `LANG`): Italian if it starts with `it`, English otherwise. Answers and backend messages are shown as the backend sends them.
 
 | Key | Action |
 |---|---|
