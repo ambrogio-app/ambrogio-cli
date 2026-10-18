@@ -23,6 +23,21 @@ L'analisi passa se la revisione è identificata in modo riproducibile e tutti gl
   * verify: [Compatibilità con l'API conversazionale del backend](../Requirements/TerminalConversation.md#compatibilità-con-lapi-conversazionale-del-backend)
 ---
 
+### Controllo del percorso CI del client terminale
+
+Esaminare `.github/workflows/ci.yml` ed eseguirlo su GitHub dopo un push sul branch principale.
+
+#### Details
+Il controllo passa se il workflow si attiva su push del branch principale, pull request, richiesta manuale e chiamata da altri workflow; installa le dipendenze con `npm ci` su Node.js 22; esegue Reqvire 1.3.2 `validate` e `lint` facendo fallire il job se il lint riporta correzioni automatiche o elementi da rivedere; esegue `npm run typecheck`, `npm test` e `npm run build`; e l'esecuzione su GitHub termina con successo. Fallisce se manca una fase o se un controllo fallito non fa fallire il job.
+
+#### Metadata
+  * type: inspection-verification
+
+#### Relations
+  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
+  * verify: [Controlli CI del client terminale](../Requirements/TerminalConversation.md#controlli-ci-del-client-terminale)
+---
+
 ### Controllo del repository del client
 
 Esaminare il repository Git del client e la configurazione del workspace Reqvire, quindi verificare che modello, decisioni e codice del client siano versionati qui.

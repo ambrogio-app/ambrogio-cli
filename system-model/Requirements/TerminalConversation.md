@@ -44,6 +44,20 @@ Quando il client terminale comunica con il backend Ambrogio, deve usare il proto
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
+### Controlli CI del client terminale
+
+Quando viene eseguito un push sul branch principale o viene proposta una pull request, la CI del client deve eseguire la validazione e il lint del modello Reqvire, il controllo TypeScript senza emissione, la suite di test del client e la compilazione, e deve fallire se uno di questi controlli fallisce.
+
+#### Details
+Decisione concordata con la persona il 18 ottobre 2026, allineata ai controlli già adottati dal satellite: Reqvire 1.3.2 per `validate` e `lint`, con il lint che fallisce se restano correzioni automatiche o elementi da rivedere; `npm run typecheck`; `npm test`, che usa il backend simulato locale; `npm run build`. La prova di integrazione contro la revisione backend fissata (`npm run test:backend`) richiede un checkout del backend e resta fuori dalla CI. Node.js 22, la versione minima del client.
+
+#### Metadata
+  * type: requirement
+
+#### Relations
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
 ### Controllo dei segreti prima del commit
 
 Quando si crea un commit in un clone del repository con gli hook versionati attivi, il controllo pre-commit deve scansionare con gitleaks le modifiche in staging e deve impedire il commit se rileva un segreto oppure se gitleaks non è disponibile.
