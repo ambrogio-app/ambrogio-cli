@@ -55,6 +55,7 @@ Decisione concordata con la persona il 18 ottobre 2026, allineata ai controlli g
   * type: requirement
 
 #### Relations
+  * satisfiedBy: [ci.yml](../../.github/workflows/ci.yml)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
