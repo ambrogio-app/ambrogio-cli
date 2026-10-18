@@ -4,9 +4,9 @@
 
 | Repository | Role |
 |---|---|
-| [ambrogio-backend](https://github.com/adrianofoschi/ambrogio-backend) | Conversation server, agents, speech, storage, public protocol |
+| [ambrogio-backend](https://github.com/ambrogio-app/ambrogio-backend) | Conversation server, agents, speech, storage, public protocol |
 | **ambrogio-cli** (this one) | Terminal chat client |
-| [ambrogio-satellite](https://github.com/adrianofoschi/ambrogio-satellite) | Voice satellite with wake word, microphone and speaker |
+| [ambrogio-satellite](https://github.com/ambrogio-app/ambrogio-satellite) | Voice satellite with wake word, microphone and speaker |
 
 > Ambrogio is in early development and currently speaks Italian.
 
@@ -39,7 +39,7 @@ flowchart LR
 
 - Node.js 22 or later, with npm
 - An interactive terminal of at least 70 × 14 characters
-- A running [ambrogio-backend](https://github.com/adrianofoschi/ambrogio-backend) that this machine can reach
+- A running [ambrogio-backend](https://github.com/ambrogio-app/ambrogio-backend) that this machine can reach
 - Runtime library: [Terminal Kit](https://github.com/cronvel/terminal-kit). The client uses Node's built-in `WebSocket` and `fetch`
 
 The backend version this client is compatible with is recorded in [`system-model/Contracts/TerminalConversation.md`](system-model/Contracts/TerminalConversation.md).
