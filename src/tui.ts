@@ -114,8 +114,8 @@ export async function runTerminalChat(url: URL, identity: ClientIdentity, t: Tex
     doc.on('key', onKey);
     menu = chat = input = header = statusBox = undefined;
     if (term.width < 70 || term.height < 14) {
-      new kit.TextBox({ parent: doc, x: 1, y: 1, width: Math.max(1, term.width - 2), height: 3,
-        content: t.terminalTooSmall });
+      new kit.TextBox({ parent: doc, x: 1, y: 1, width: Math.max(1, term.width - 2),
+        height: Math.max(1, term.height - 2), content: t.terminalTooSmall, lineWrap: true, wordWrap: true });
       return;
     }
     side = Math.min(34, Math.max(24, Math.floor(term.width * 0.29)));
