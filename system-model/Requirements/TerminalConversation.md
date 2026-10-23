@@ -52,10 +52,13 @@ Quando il client terminale comunica con il backend Ambrogio, deve usare il proto
 Quando viene eseguito un push sul branch principale, viene proposta una pull request, viene richiesta un'esecuzione manuale o un altro workflow la richiama, la CI del client deve eseguire la validazione e il lint del modello Reqvire, il controllo TypeScript senza emissione, la suite di test del client e la compilazione, e deve fallire se uno di questi controlli fallisce.
 
 #### Details
-I trigger sono `push` sul branch `main`, `pull_request`, `workflow_dispatch` e `workflow_call`. I controlli sono Reqvire 1.3.2 per `validate` e `lint`, con il lint che fallisce se restano correzioni automatiche o elementi da rivedere; `pnpm typecheck`; `pnpm test`, che usa il backend simulato locale; `pnpm build`, su Node.js 24, la versione minima del client, dopo l'installazione congelata delle dipendenze con pnpm. La prova di integrazione contro la revisione backend fissata (`pnpm test:backend`) richiede un checkout compilato del backend e resta fuori dalla CI.
+I trigger sono `push` sul branch `main`, `pull_request`, `workflow_dispatch` e `workflow_call`. I controlli sono Reqvire 1.3.2 per `validate` e `lint`, con il lint che fallisce se restano correzioni automatiche o elementi da rivedere; `pnpm typecheck`; `pnpm test`, che usa il backend simulato locale; `pnpm build`, su Node.js 24, la versione minima del client, dopo l'installazione congelata delle dipendenze con pnpm. Prima di `pnpm test` il job installa gitleaks come indicato dal profilo di scansione dei segreti, perché la suite di test prova l'hook pre-commit e il comando di scansione. La prova di integrazione contro la revisione backend fissata (`pnpm test:backend`) richiede un checkout compilato del backend e resta fuori dalla CI.
 
 #### Metadata
   * type: requirement
+
+#### Contract References
+  * [Profilo di scansione dei segreti con gitleaks](../Contracts/TerminalConversation.md#profilo-di-scansione-dei-segreti-con-gitleaks)
 
 #### Relations
   * satisfiedBy: [ci.yml](../../.github/workflows/ci.yml)
@@ -489,4 +492,3 @@ Quando il client è attivo in un terminale interattivo, deve mostrare l'elenco d
   * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
-

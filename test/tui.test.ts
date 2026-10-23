@@ -1,0 +1,166 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import type { ServerResponse } from 'node:http';
+import { startFakeBackend } from './fake-backend.js';
+import { keys, startTerminal, type Screen } from './terminal.js';
+
+// Verifications: Prova della schermata conversazionale persistente;
+// Prova della ripartenza dell'elenco aggiornato.
+const executable = new URL('../src/cli.js', import.meta.url).pathname;
+const environment = { ...process.env, AMBROGIO_LANGUAGE: 'it' };
+const at = '2026-10-16T10:00:00.000Z';
+const tooSmall = ['Allarga il terminale ad almeno 70 colonne e 14 righe.', 'La chat corrente resta aperta.'];
+
+function json(response: ServerResponse, body: unknown, status = 200): void {
+  response.writeHead(status, { 'Content-Type': 'application/json' }).end(JSON.stringify(body));
+}
+
+function conversation(id: string, texts: readonly string[]) {
+  return { id, createdAt: at, lastActivityAt: at, turns: texts.map((text, index) => ({ id: `t${index + 1}`, text,
+    acceptedAt: at, status: 'answered', answer: 'Risposta', finishedAt: at })) };
+}
+
+/** The sidebar width the client computes for a terminal of the given width. */
+function side(cols: number): number { return Math.min(34, Math.max(24, Math.floor(cols * 0.29))); }
+
+/** The labels shown in the sidebar list, top to bottom. */
+function sidebar(screen: Screen): string[] {
+  const width = side(screen.cols);
+  return screen.lines().slice(3, screen.rows - 4).map(line => line.slice(0, width).trim()).filter(Boolean);
+}
+
+/** The screen text with wrapped lines joined, to read a message regardless of the terminal width. */
+function words(screen: Screen): string {
+  return screen.lines().map(line => line.trim()).filter(Boolean).join(' ');
+}
+
+function twoPanels(screen: Screen): boolean {
+  const width = side(screen.cols);
+  return screen.lines()[5]?.[width] === '│'
+    && (screen.lines()[screen.rows - 4] ?? '').includes('Scrivi un messaggio e premi Invio')
+    && (screen.lines()[screen.rows - 1] ?? '').includes('^Q esci');
+}
+
+test('il ridimensionamento ricalcola i pannelli e sotto 70×14 chiede di allargare senza perdere la chat', async () => {
+  const turns: Array<{ text: string; conversationId?: string }> = [];
+  const fake = await startFakeBackend({
+    onTurn(turn) {
+      turns.push({ text: turn.text, ...(turn.conversationId ? { conversationId: turn.conversationId } : {}) });
+      turn.accept('c1', `t${turns.length}`);
+      turn.transmit(['Risposta']);
+      turn.send({ type: 'turn.completed', turnId: `t${turns.length}`, expectsReply: false });
+    },
+    http(request, response) {
+      if (request.url === '/api/conversations') json(response, { items: [], nextCursor: null });
+      else if (request.url === '/api/conversations/c1') json(response, conversation('c1', turns.map(turn => turn.text)));
+      else json(response, { error: 'Non trovata.' }, 404);
+    },
+  });
+  const terminal = await startTerminal(executable, ['--server', fake.url], { cols: 100, rows: 30, env: environment });
+  try {
+    await terminal.waitFor(screen => twoPanels(screen) && sidebar(screen)[0] === 'Nuova chat', 'schermata 100×30');
+    terminal.write('ciao\r');
+    await terminal.waitFor(screen => screen.text().includes('Tu: ciao') && screen.text().includes('Ambrogio: Risposta')
+      && screen.text().includes('Risposta conservata.'), 'primo turno');
+
+    for (const [cols, rows] of [[80, 24], [120, 40]] as const) {
+      terminal.resize(cols, rows);
+      await terminal.waitFor(screen => twoPanels(screen) && screen.text().includes('Tu: ciao')
+        && sidebar(screen)[0] === 'ciao', `pannelli ricalcolati a ${cols}×${rows}`);
+      assert.equal(terminal.screen.lines()[5]?.indexOf('│'), side(cols), `separator at ${cols}×${rows}`);
+    }
+
+    for (const [cols, rows] of [[69, 30], [100, 13], [40, 10]] as const) {
+      terminal.resize(cols, rows);
+      await terminal.waitFor(screen => tooSmall.every(line => words(screen).includes(line)), `avviso a ${cols}×${rows}`);
+      const text = terminal.screen.text();
+      assert.doesNotMatch(text, /Tu: ciao|Scrivi un messaggio e premi Invio|│/, `no panels at ${cols}×${rows}`);
+    }
+
+    terminal.resize(70, 14);
+    await terminal.waitFor(screen => twoPanels(screen) && screen.text().includes('Tu: ciao')
+      && !screen.text().includes(tooSmall[0]!), 'pannelli a 70×14');
+
+    terminal.resize(100, 30);
+    await terminal.waitFor(screen => twoPanels(screen) && screen.text().includes('Tu: ciao'), 'chat ritrovata');
+    terminal.write('ancora\r');
+    await terminal.waitFor(screen => screen.text().includes('Tu: ancora') && turns.length === 2, 'secondo turno');
+    assert.deepEqual(turns, [{ text: 'ciao' }, { text: 'ancora', conversationId: 'c1' }]);
+    assert.equal(fake.hellos.length, 1);
+    assert.equal(await terminal.quit(), 0);
+  } finally {
+    terminal.dispose();
+    await fake.close();
+  }
+});
+
+test('una conversazione con storico non disponibile resta selezionabile con l’identificativo abbreviato', async () => {
+  const unavailable = '0123456789abcdef-unavailable';
+  let unavailableReads = 0;
+  const fake = await startFakeBackend({ http(request, response) {
+    if (request.url === '/api/conversations') {
+      json(response, { items: [{ id: 'c1', lastActivityAt: at }, { id: unavailable, lastActivityAt: at }], nextCursor: null });
+    } else if (request.url === '/api/conversations/c1') json(response, conversation('c1', ['messaggio c1']));
+    else if (request.url === `/api/conversations/${unavailable}`) {
+      unavailableReads += 1;
+      if (unavailableReads === 1) json(response, { error: 'Storico non disponibile.' }, 500);
+      else json(response, conversation(unavailable, ['messaggio recuperato']));
+    } else json(response, { error: 'Non trovata.' }, 404);
+  } });
+  const terminal = await startTerminal(executable, ['--server', fake.url], { cols: 100, rows: 30, env: environment });
+  try {
+    await terminal.waitFor(screen => sidebar(screen).join('|') === `Nuova chat|messaggio c1|${unavailable.slice(0, 8)}`,
+      'identificativo abbreviato nella barra laterale');
+    assert.equal(unavailableReads, 1);
+    assert.doesNotMatch(terminal.screen.text(), /0123456789/);
+    await terminal.keys(keys.tab, keys.down, keys.down, keys.enter);
+    await terminal.waitFor(screen => screen.text().includes('Tu: messaggio recuperato')
+      && screen.text().includes('Chat aperta.'), 'apertura della conversazione');
+    assert.equal(unavailableReads, 2);
+    assert.equal(await terminal.quit(), 0);
+  } finally {
+    terminal.dispose();
+    await fake.close();
+  }
+});
+
+test('l’aggiornamento presenta l’ordine corrente dell’archivio e prosegue con il nuovo riferimento', async () => {
+  const lists: string[] = [];
+  let archive = 1;
+  const pages: Record<number, Record<string, { items: string[]; nextCursor: string | null }>> = {
+    1: { '': { items: ['c1'], nextCursor: 'p1' }, p1: { items: ['c2'], nextCursor: null } },
+    2: { '': { items: ['c3', 'c2'], nextCursor: 'p2' }, p2: { items: ['c1'], nextCursor: null } },
+  };
+  const fake = await startFakeBackend({ http(request, response) {
+    const url = new URL(request.url ?? '', 'http://localhost');
+    if (url.pathname === '/api/conversations') {
+      lists.push(url.search);
+      const page = pages[archive]?.[url.searchParams.get('cursor') ?? ''];
+      if (!page) { json(response, { error: 'Cursor non valido.' }, 400); return; }
+      json(response, { items: page.items.map(id => ({ id, lastActivityAt: at })), nextCursor: page.nextCursor });
+    } else {
+      const id = url.pathname.split('/').at(-1) ?? '';
+      json(response, conversation(id, [`messaggio ${id}`]));
+    }
+  } });
+  const terminal = await startTerminal(executable, ['--server', fake.url], { cols: 100, rows: 30, env: environment });
+  const shown = (expected: string) => terminal.waitFor(screen => sidebar(screen).join('|') === expected,
+    `barra laterale ${expected}`);
+  try {
+    await shown('Nuova chat|messaggio c1');
+    terminal.write(keys.more);
+    await shown('Nuova chat|messaggio c1|messaggio c2');
+
+    archive = 2;
+    terminal.write(keys.refresh);
+    await shown('Nuova chat|messaggio c3|messaggio c2');
+    await terminal.waitFor(screen => screen.text().includes('Conversazioni aggiornate.'), 'stato aggiornato');
+    terminal.write(keys.more);
+    await shown('Nuova chat|messaggio c3|messaggio c2|messaggio c1');
+    assert.deepEqual(lists, ['', '?cursor=p1', '', '?cursor=p2']);
+    assert.equal(await terminal.quit(), 0);
+  } finally {
+    terminal.dispose();
+    await fake.close();
+  }
+});

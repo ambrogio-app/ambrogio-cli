@@ -23,19 +23,19 @@ L'analisi passa se la revisione è identificata in modo riproducibile e tutti gl
   * verify: [Compatibilità con l'API conversazionale del backend](../Requirements/TerminalConversation.md#compatibilità-con-lapi-conversazionale-del-backend)
 ---
 
-### Controllo del percorso CI del client terminale
+### Controllo dei commit delle action fissate
 
-Esaminare `.github/workflows/ci.yml` ed eseguirlo su GitHub dopo un push sul branch principale.
+Per ogni action fissata nel profilo di protezione dei workflow GitHub Actions, confrontare il commit con il tag della versione indicata nel repository dell'action su GitHub.
 
 #### Details
-Il controllo passa se il workflow si attiva su push del branch principale, pull request, richiesta manuale e chiamata da altri workflow; installa pnpm 12.11.2 e le dipendenze con `pnpm install --frozen-lockfile` su Node.js 24; esegue Reqvire 1.3.2 `validate` e `lint` facendo fallire il job se il lint riporta correzioni automatiche o elementi da rivedere; esegue `pnpm typecheck`, `pnpm test` e `pnpm build`; e l'esecuzione su GitHub termina con successo. Fallisce se manca una fase o se un controllo fallito non fa fallire il job. Non automatizzabile: l'attivazione dei trigger e l'esito del job si osservano soltanto su GitHub Actions dopo un push; il confronto testuale del workflow con le fasi richieste è automatizzabile.
+Il controllo passa se ogni commit fissato corrisponde al tag della versione indicata nel commento accanto al commit. Fallisce se un commit non appartiene al repository dell'action o non corrisponde alla versione indicata. Non automatizzabile: confermare che il commit fissato corrisponda alla versione dichiarata richiede di consultare il repository dell'action su GitHub, fuori dal repository e dalla rete disponibile ai test; il confronto dei workflow con i valori del contratto è svolto dalla «Prova della protezione dei workflow di CI».
 
 #### Metadata
   * type: inspection-verification
 
 #### Relations
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
-  * verify: [Controlli CI del client terminale](../Requirements/TerminalConversation.md#controlli-ci-del-client-terminale)
+  * verify: [Protezione dei workflow di CI](../Requirements/TerminalConversation.md#protezione-dei-workflow-di-ci)
 ---
 
 ### Controllo del repository del client
@@ -54,42 +54,27 @@ Il controllo passa se il repository e il modello Reqvire sono autonomi dal backe
   * verify: [Stack del client terminale](../Requirements/TerminalConversation.md#stack-del-client-terminale)
 ---
 
-### Controllo dell'hook pre-commit dei segreti
+### Controllo dell'esecuzione della CI su GitHub
 
-Attivare l'hook con `git config core.hooksPath .githooks` in un clone di prova, mettere in staging un file con un token fittizio riconosciuto da gitleaks e tentare il commit; ripetere con un file privo di segreti e con `gitleaks` assente dal `PATH`.
+Dopo un push sul branch principale e in una pull request, osservare su GitHub Actions l'esecuzione del workflow `Terminal client CI`.
 
 #### Details
-Il controllo passa se il commit con il token fittizio viene rifiutato senza mostrarne il valore, il commit senza segreti riesce e, senza `gitleaks` nel `PATH`, il commit viene rifiutato con un messaggio che indica come installarlo. Il clone di prova viene eliminato dopo il controllo. Non automatizzabile: la prova richiede il binario gitleaks nel `PATH` e un clone con l'hook attivato localmente, che la suite di test e la CI del client non predispongono.
+Il controllo passa se il workflow si avvia per il push sul branch principale e per la pull request e il job `Terminal client checks` esegue tutte le fasi e termina con successo. Fallisce se il workflow non si avvia per uno dei due eventi, se una fase viene saltata o se un controllo fallito non fa fallire il job. Non automatizzabile: l'attivazione dei trigger e l'esito del job si osservano soltanto su GitHub Actions dopo un push; il testo del workflow è confrontato con le fasi richieste dalla «Prova della configurazione del percorso CI».
 
 #### Metadata
   * type: inspection-verification
 
 #### Relations
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
-  * verify: [Controllo dei segreti prima del commit](../Requirements/TerminalConversation.md#controllo-dei-segreti-prima-del-commit)
+  * verify: [Controlli CI del client terminale](../Requirements/TerminalConversation.md#controlli-ci-del-client-terminale)
 ---
 
-### Controllo della protezione dei workflow di CI
+### Controllo dell'esecuzione della scansione dei segreti su GitHub
 
-Esaminare `.github/workflows/ci.yml` e `.github/workflows/secret-scan.yml` e confrontarli con il profilo di protezione dei workflow; per ogni action fissata, confrontare il commit con il tag della versione indicata nel repository dell'action.
-
-#### Details
-Il controllo passa se ogni workflow dichiara soltanto `contents: read`, ogni action usa il commit del contratto e quel commit corrisponde alla versione indicata, ogni job ha il `timeout-minutes` del contratto, ogni checkout ha `persist-credentials: false` ed entrambi i workflow hanno il trigger `workflow_call`. Fallisce se un workflow usa un tag mobile, concede permessi di scrittura, non limita la durata di un job o conserva le credenziali del checkout. Non automatizzabile: confermare che il commit fissato corrisponda alla versione dichiarata richiede di consultare il repository dell'action su GitHub, fuori dal repository e dalla rete disponibile ai test; il confronto testuale dei workflow con i valori del contratto è automatizzabile.
-
-#### Metadata
-  * type: inspection-verification
-
-#### Relations
-  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
-  * verify: [Protezione dei workflow di CI](../Requirements/TerminalConversation.md#protezione-dei-workflow-di-ci)
----
-
-### Controllo della scansione dei segreti in CI
-
-Esaminare `.github/workflows/secret-scan.yml` ed eseguirlo su GitHub dopo un push.
+Dopo un push su un branch e in una pull request, osservare su GitHub Actions l'esecuzione del workflow `Secret scan`.
 
 #### Details
-Il controllo passa se il workflow si attiva su push di qualunque branch, pull request, richiesta manuale e chiamata da altri workflow; recupera l'intera storia con il checkout fissato e senza credenziali persistenti; scarica gitleaks v8.30.1, ne verifica lo SHA-256 prima dell'estrazione e interrompe il job se l'impronta non corrisponde; esegue `gitleaks git --redact --no-banner --exit-code 1 .`; e l'esecuzione su GitHub termina con successo sulla storia corrente. Fallisce se una di queste condizioni manca o se l'output riporta il valore di un segreto. Non automatizzabile: i trigger, la storia completa del repository remoto e l'esito del job si osservano soltanto su GitHub Actions dopo un push; il confronto testuale del workflow con il contratto è automatizzabile.
+Il controllo passa se il workflow si avvia per il push e per la pull request, il job `Gitleaks` recupera l'intera storia del repository remoto, la verifica dell'impronta dell'archivio scaricato riesce e la scansione della storia corrente termina con successo. Fallisce se il workflow non si avvia per uno dei due eventi, se il job scansiona una storia parziale o se termina con un errore. Non automatizzabile: i trigger, la storia completa del repository remoto, l'archivio servito dalla release e l'esito del job si osservano soltanto su GitHub Actions dopo un push; il testo del workflow e il comando di scansione sono controllati dalla «Prova della configurazione della scansione dei segreti in CI».
 
 #### Metadata
   * type: inspection-verification
@@ -167,6 +152,22 @@ La prova passa se la persona può conversare dal terminale, osserva i frammenti 
   * verify: [Segnalazione locale dell'interruzione della chat testuale](../Requirements/TerminalConversation.md#segnalazione-locale-dellinterruzione-della-chat-testuale)
 ---
 
+### Prova dell'hook pre-commit dei segreti
+
+In un repository Git temporaneo con `core.hooksPath` rivolto alla cartella `.githooks` del client, mettere in staging un file con un token fittizio riconosciuto da gitleaks, generato durante la prova, e tentare il commit; ripetere con un file privo di segreti e con un `PATH` che non contiene `gitleaks`.
+
+#### Details
+La prova passa se il commit con il token fittizio viene rifiutato senza che l'output ne riporti il valore, il commit senza segreti riesce e, senza `gitleaks` nel `PATH`, il commit viene rifiutato con il messaggio che indica di installare gitleaks 8.30.1. Il repository temporaneo viene eliminato dopo la prova. Fallisce se il commit con il token fittizio viene creato, se l'output riporta il valore del token, se il commit senza segreti viene rifiutato o se senza gitleaks il commit viene creato o il messaggio non indica come installarlo. La prova richiede gitleaks nel `PATH`, che il job `checks` della CI installa.
+
+#### Metadata
+  * type: test-verification
+
+#### Relations
+  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
+  * satisfiedBy: [secrets.test.ts](../../test/secrets.test.ts)
+  * verify: [Controllo dei segreti prima del commit](../Requirements/TerminalConversation.md#controllo-dei-segreti-prima-del-commit)
+---
+
 ### Prova dell'identità del client nella sessione
 
 Avviare il client contro un backend controllato senza configurazione dell'identità, poi con `AMBROGIO_CLIENT_ID`, poi con `--client-id` insieme alla variabile; inviare un turno in ciascun caso e osservare `session.hello`. Ripetere il caso senza configurazione con l'interfaccia in inglese. Provare anche un valore vuoto.
@@ -219,6 +220,39 @@ La prova passa se la conversazione riaperta mostra il turno «In elaborazione» 
   * verify: [Invito ad aggiornare la conversazione in elaborazione](../Requirements/TerminalConversation.md#invito-ad-aggiornare-la-conversazione-in-elaborazione)
 ---
 
+### Prova della configurazione del percorso CI
+
+Leggere `.github/workflows/ci.yml` come testo e confrontarlo con i trigger e le fasi richiesti alla CI del client e con l'installazione di gitleaks di `.github/workflows/secret-scan.yml`.
+
+#### Details
+La prova passa se il workflow dichiara i trigger `push` sul branch `main`, `pull_request`, `workflow_dispatch` e `workflow_call`; il job `checks` usa Node.js 24, installa pnpm 12.11.2 e le dipendenze con `pnpm install --frozen-lockfile`; esegue Reqvire 1.3.2 `validate` e `lint --json` con `set -euo pipefail` e la condizione `jq -e '.auto_fixable == [] and .needs_manual_review == []'`, poi `node scripts/check-model.mjs`, `pnpm typecheck`, `pnpm test` e `pnpm build`, in quest'ordine; e prima di `pnpm test` installa gitleaks con la stessa versione, la stessa impronta e lo stesso script di `secret-scan.yml`. Fallisce se manca un trigger o una fase, se le fasi sono in un altro ordine, se una fase dichiara `continue-on-error` o ignora l'esito di un comando con `|| true`, oppure se versione, impronta o script di installazione di gitleaks differiscono da quelli di `secret-scan.yml`.
+
+#### Metadata
+  * type: test-verification
+
+#### Relations
+  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
+  * satisfiedBy: [workflows.test.ts](../../test/workflows.test.ts)
+  * verify: [Controlli CI del client terminale](../Requirements/TerminalConversation.md#controlli-ci-del-client-terminale)
+---
+
+### Prova della configurazione della scansione dei segreti in CI
+
+Leggere `.github/workflows/secret-scan.yml` come testo e confrontarlo con il profilo di scansione dei segreti; eseguire il comando di scansione del workflow con gitleaks su un repository Git temporaneo che contiene in un commit un token fittizio generato durante la prova, e su uno che non contiene segreti.
+
+#### Details
+La prova passa se il workflow dichiara i trigger `push` su qualunque branch, `pull_request`, `workflow_dispatch` e `workflow_call`; esegue il checkout fissato con `fetch-depth: 0` e `persist-credentials: false`; con `set -euo pipefail` scarica dalla release ufficiale l'archivio della versione indicata dal contratto, ne verifica con `sha256sum --check --strict` l'impronta del contratto prima di estrarlo e aggiunge il binario al `PATH`; esegue `gitleaks git --redact --no-banner --exit-code 1 .`; e quel comando termina con esito non riuscito sul repository con il token fittizio, senza riportarne il valore, e con esito riuscito sul repository senza segreti. Fallisce se manca un trigger o una di queste fasi, se la verifica dell'impronta segue l'estrazione, se versione o impronta differiscono dal contratto, se il comando non fallisce in presenza del token o se l'output ne riporta il valore.
+
+#### Metadata
+  * type: test-verification
+
+#### Relations
+  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
+  * satisfiedBy: [secrets.test.ts](../../test/secrets.test.ts)
+  * satisfiedBy: [workflows.test.ts](../../test/workflows.test.ts)
+  * verify: [Scansione dei segreti nella CI](../Requirements/TerminalConversation.md#scansione-dei-segreti-nella-ci)
+---
+
 ### Prova della gestione delle dipendenze
 
 Leggere `package.json`, `pnpm-workspace.yaml` e `pnpm-lock.yaml` del repository e confrontarli con il contratto di installazione, con le versioni risolte nel lockfile e con la versione minima di Node.js; in CI installare le dipendenze da un checkout pulito con `pnpm install --frozen-lockfile`.
@@ -254,12 +288,28 @@ La prova passa se l'opzione prevale sulla variabile; una variabile vuota è igno
   * verify: [Testi del client terminale nella lingua dell'interfaccia](../Requirements/TerminalConversation.md#testi-del-client-terminale-nella-lingua-dellinterfaccia)
 ---
 
+### Prova della protezione dei workflow di CI
+
+Leggere `.github/workflows/ci.yml` e `.github/workflows/secret-scan.yml` come testo e confrontarli con i valori del profilo di protezione dei workflow GitHub Actions letti dal contratto.
+
+#### Details
+La prova passa se ogni workflow dichiara al livello del workflow soltanto `permissions: contents: read` e nessun job dichiara permessi; ogni `uses:` indica un'action del contratto con il commit di 40 caratteri esadecimali e il commento della versione indicati dal contratto; ogni job ha il `runs-on` e il `timeout-minutes` del contratto; ogni checkout ha `persist-credentials: false`; `actions/setup-node` ha `package-manager-cache: false`; entrambi i workflow dichiarano il trigger `workflow_call`; nessun workflow dichiara `concurrency`. Fallisce se un workflow usa un tag mobile o un commit diverso da quello del contratto, concede permessi oltre la lettura dei contenuti, non limita la durata di un job o la limita con un valore diverso dal contratto, conserva le credenziali del checkout o non dichiara `workflow_call`.
+
+#### Metadata
+  * type: test-verification
+
+#### Relations
+  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
+  * satisfiedBy: [workflows.test.ts](../../test/workflows.test.ts)
+  * verify: [Protezione dei workflow di CI](../Requirements/TerminalConversation.md#protezione-dei-workflow-di-ci)
+---
+
 ### Prova della ripartenza dell'elenco aggiornato
 
 Caricare almeno due pagine nel client della chat testuale, poi aggiungere una conversazione o aggiornare l'ultima attività di una conversazione meno recente nell'archivio. Attivare l'aggiornamento dell'elenco e osservare la richiesta successiva e le voci mostrate.
 
 #### Details
-La prova passa se il client scarta il riferimento alla vecchia pagina successiva, richiede la prima pagina e presenta l'ordine corrente delle conversazioni, compresa quella nuova o aggiornata. Fallisce se continua dalla pagina della consultazione precedente o tratta le pagine già caricate come una fotografia immutabile. Il test PTY della barra laterale verifica che, dopo la pagina successiva, l'aggiornamento richieda di nuovo la prima pagina senza cursor.
+La prova passa se il client scarta il riferimento alla vecchia pagina successiva, richiede la prima pagina e presenta le voci nell'ordine corrente della nuova prima pagina, compresa quella nuova o aggiornata, senza le voci delle pagine caricate in precedenza che la nuova prima pagina non contiene; la pagina successiva richiesta dopo l'aggiornamento usa il riferimento ricevuto con la nuova prima pagina. Fallisce se continua dalla pagina della consultazione precedente, se mostra le voci nell'ordine della consultazione precedente o tratta le pagine già caricate come una fotografia immutabile. I test in terminale simulato verificano che, dopo la pagina successiva, l'aggiornamento richieda di nuovo la prima pagina senza cursor e che, dopo un cambiamento dell'archivio, la barra laterale presenti l'ordine della nuova prima pagina e prosegua con il nuovo riferimento.
 
 #### Metadata
   * type: test-verification
@@ -267,15 +317,16 @@ La prova passa se il client scarta il riferimento alla vecchia pagina successiva
 #### Relations
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
   * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
+  * satisfiedBy: [tui.test.ts](../../test/tui.test.ts)
   * verify: [Ripartenza dell'elenco conversazioni dopo un aggiornamento](../Requirements/TerminalConversation.md#ripartenza-dellelenco-conversazioni-dopo-un-aggiornamento)
 ---
 
 ### Prova della schermata conversazionale persistente
 
-Avviare il client in un terminale interattivo simulato con un backend HTTP controllato che offre più conversazioni e storici. Verificare che all'avvio sia selezionata «Nuova chat» come prima voce senza chiamata HTTP di creazione e che, dopo il primo invio, la voce mostri l'anteprima del messaggio. Verificare nella stessa schermata la barra laterale e la chat corrente, navigare con `Tab`, frecce e `Invio`, inviare due turni nella stessa chat e ricevere una risposta progressiva. Aggiornare l'elenco e ridimensionare il terminale.
+Avviare il client in un terminale interattivo simulato con un backend HTTP controllato che offre più conversazioni e storici. Verificare che all'avvio sia selezionata «Nuova chat» come prima voce senza chiamata HTTP di creazione e che, dopo il primo invio, la voce mostri l'anteprima del messaggio. Verificare nella stessa schermata la barra laterale e la chat corrente, navigare con `Tab`, frecce e `Invio`, inviare due turni nella stessa chat e ricevere una risposta progressiva. Aggiornare l'elenco e ridimensionare il terminale, anche sotto e poi di nuovo sopra la dimensione minima di 70 colonne e 14 righe. Rendere non disponibile lo storico di una conversazione dell'elenco al momento dell'anteprima.
 
 #### Details
-La prova passa se la chat e il campo di scrittura restano visibili durante composizione, invio e ricezione, il secondo turno continua la stessa conversazione e l'elenco mostra le anteprime dei primi messaggi ottenute dagli storici pubblici. La nuova chat iniziale resta aperta dopo il primo invio e prende il nome da quel testo; Tab, frecce e Invio aprono la chat scelta. L'aggiornamento riparte dalla prima pagina e il ridimensionamento non perde la chat corrente. Se uno storico non è disponibile, la voce resta selezionabile con ID abbreviato. Il test PTY da 100×30 verifica la schermata, le anteprime, due turni, la navigazione, la pagina successiva e l'aggiornamento. La prova con server completo verifica nuova chat, riapertura e continuazione.
+La prova passa se la chat e il campo di scrittura restano visibili durante composizione, invio e ricezione, il secondo turno continua la stessa conversazione e l'elenco mostra le anteprime dei primi messaggi ottenute dagli storici pubblici. La nuova chat iniziale resta aperta dopo il primo invio e prende il nome da quel testo; Tab, frecce e Invio aprono la chat scelta. L'aggiornamento riparte dalla prima pagina. Il ridimensionamento ricalcola la larghezza della barra laterale e la posizione del campo di scrittura secondo le nuove dimensioni; con meno di 70 colonne o meno di 14 righe la schermata mostra al posto dei pannelli, per intero e andando a capo quando una riga non basta, l'avviso della voce «Terminale troppo piccolo» del catalogo dei testi, e tornando a una dimensione sufficiente mostra di nuovo la chat corrente, che il turno successivo continua. Se lo storico di una conversazione non è disponibile, la sua voce mostra un identificativo abbreviato e resta selezionabile con Tab, frecce e Invio. Fallisce se la chat o il campo di scrittura scompaiono durante un turno, se il ridimensionamento lascia i pannelli con le dimensioni precedenti, se la schermata mostra due pannelli sotto la dimensione minima o non mostra l'avviso per intero, se dopo il ridimensionamento la chat corrente è perduta o il turno successivo apre un'altra conversazione, oppure se una conversazione con storico non disponibile scompare dall'elenco, mostra l'identificativo completo o non è selezionabile. I test in terminale simulato verificano a 100×30 la schermata, le anteprime, due turni, la navigazione, la pagina successiva e l'aggiornamento, e a più dimensioni il ridimensionamento, la vista sotto la dimensione minima e l'identificativo abbreviato. La prova con server completo verifica nuova chat, riapertura e continuazione.
 
 #### Metadata
   * type: test-verification
@@ -284,6 +335,7 @@ La prova passa se la chat e il campo di scrittura restano visibili durante compo
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
   * satisfiedBy: [verify-pinned-backend.mjs](../../scripts/verify-pinned-backend.mjs)
   * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
+  * satisfiedBy: [tui.test.ts](../../test/tui.test.ts)
   * verify: [Anteprima delle conversazioni nella barra laterale](../Requirements/TerminalConversation.md#anteprima-delle-conversazioni-nella-barra-laterale)
   * verify: [Navigazione della chat nella schermata persistente](../Requirements/TerminalConversation.md#navigazione-della-chat-nella-schermata-persistente)
   * verify: [Nuova chat iniziale nella barra laterale](../Requirements/TerminalConversation.md#nuova-chat-iniziale-nella-barra-laterale)
@@ -305,4 +357,3 @@ La prova passa se, durante l'elaborazione, il client mostra il testo del turno c
   * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
   * verify: [Stato del turno in elaborazione alla riapertura](../Requirements/TerminalConversation.md#stato-del-turno-in-elaborazione-alla-riapertura)
 ---
-
