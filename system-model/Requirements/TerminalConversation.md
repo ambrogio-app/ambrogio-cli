@@ -39,6 +39,9 @@ Quando il client terminale comunica con il backend Ambrogio, deve usare il proto
 #### Metadata
   * type: requirement
 
+#### Contract References
+  * [Avvio locale del client da checkout](../Contracts/TerminalConversation.md#avvio-locale-del-client-da-checkout)
+
 #### Relations
   * satisfiedBy: [backend.ts](../../src/backend.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
@@ -46,16 +49,32 @@ Quando il client terminale comunica con il backend Ambrogio, deve usare il proto
 
 ### Controlli CI del client terminale
 
-Quando viene eseguito un push sul branch principale o viene proposta una pull request, la CI del client deve eseguire la validazione e il lint del modello Reqvire, il controllo TypeScript senza emissione, la suite di test del client e la compilazione, e deve fallire se uno di questi controlli fallisce.
+Quando viene eseguito un push sul branch principale, viene proposta una pull request, viene richiesta un'esecuzione manuale o un altro workflow la richiama, la CI del client deve eseguire la validazione e il lint del modello Reqvire, il controllo TypeScript senza emissione, la suite di test del client e la compilazione, e deve fallire se uno di questi controlli fallisce.
 
 #### Details
-Decisione concordata con la persona il 18 ottobre 2026, allineata ai controlli già adottati dal satellite: Reqvire 1.3.2 per `validate` e `lint`, con il lint che fallisce se restano correzioni automatiche o elementi da rivedere; `npm run typecheck`; `npm test`, che usa il backend simulato locale; `npm run build`. La prova di integrazione contro la revisione backend fissata (`npm run test:backend`) richiede un checkout del backend e resta fuori dalla CI. Node.js 22, la versione minima del client.
+I trigger sono `push` sul branch `main`, `pull_request`, `workflow_dispatch` e `workflow_call`. I controlli sono Reqvire 1.3.2 per `validate` e `lint`, con il lint che fallisce se restano correzioni automatiche o elementi da rivedere; `pnpm typecheck`; `pnpm test`, che usa il backend simulato locale; `pnpm build`, su Node.js 24, la versione minima del client, dopo l'installazione congelata delle dipendenze con pnpm. La prova di integrazione contro la revisione backend fissata (`pnpm test:backend`) richiede un checkout compilato del backend e resta fuori dalla CI.
 
 #### Metadata
   * type: requirement
 
 #### Relations
   * satisfiedBy: [ci.yml](../../.github/workflows/ci.yml)
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
+### Controllo automatico dell'integrità del modello
+
+Quando la CI del repository esegue la validazione e il lint del modello Reqvire, deve eseguire anche lo script di integrità del modello e deve fallire se lo script segnala una violazione o non riesce a eseguire.
+
+#### Details
+Il controllo copre le regole di integrità verificabili sul testo e sui file; `validate` e `lint` di Reqvire non le controllano.
+
+#### Metadata
+  * type: requirement
+
+#### Relations
+  * satisfiedBy: [ci.yml](../../.github/workflows/ci.yml)
+  * satisfiedBy: [check-model.mjs](../../scripts/check-model.mjs)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -74,6 +93,71 @@ Quando si crea un commit in un clone del repository con gli hook versionati atti
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
+### Decisioni sostituite rimosse nella stessa modifica
+
+Quando una decisione ne sostituisce un'altra, la modifica che registra la nuova decisione deve aggiornare o rimuovere ogni requisito, contratto e verifica che afferma la decisione sostituita, e i testi di requisiti, contratti e verifiche non devono riportare date, storia delle decisioni o esiti di esecuzioni.
+
+#### Details
+Il modello descrive gli obblighi validi oggi e come verificarli; la storia è conservata da Git. Decisioni datate accumulate nei contratti convivono con elementi che affermano ancora le decisioni sostituite. Gli esiti dei test sono dati dalla CI; l'esito di una verifica manuale si registra nel messaggio del commit o nella pull request che la esegue, non nel modello.
+
+#### Metadata
+  * type: requirement
+
+#### Contract References
+  * [Script di integrità del modello](../Contracts/TerminalConversation.md#script-di-integrità-del-modello)
+
+#### Relations
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
+### Dipendenze fra contratti dichiarate come riferimenti
+
+Quando il contenuto di un contratto dipende da un contratto posseduto da un altro requisito, il requisito proprietario del contratto dipendente deve dichiarare una Contract Reference al contratto da cui dipende, e il contratto dipendente non deve ripetere il contenuto di quel contratto.
+
+#### Details
+Le Contract References propagano l'analisi di impatto: una modifica del contratto riferito segnala il contratto dipendente per la revisione. Un contratto che ripete un fatto posseduto da un altro requisito resta invariato quando quel fatto cambia, e il modello finisce per contraddirsi senza che l'analisi di impatto lo segnali.
+
+#### Metadata
+  * type: requirement
+
+#### Relations
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
+### File di governo collegati al modello
+
+Ogni workflow di CI, hook Git, file di build del container, esempio Compose, file di esclusione, configurazione del gestore di pacchetti, del compilatore o del runner di test e script del repository deve essere riferito da almeno un requisito o una verifica del modello.
+
+#### Details
+Un file che codifica decisioni ingegneristiche senza un collegamento al modello cambia senza che alcun obbligo lo segnali, e le decisioni presenti solo nei file divergono fra file simili, per esempio fra i workflow di controllo e quello di pubblicazione.
+
+#### Metadata
+  * type: requirement
+
+#### Contract References
+  * [Script di integrità del modello](../Contracts/TerminalConversation.md#script-di-integrità-del-modello)
+
+#### Relations
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
+### Formulazione normativa degli obblighi
+
+Gli enunciati dei requisiti e i testi dei contratti devono esprimere gli obblighi con «deve» o «devono» e non devono usare `può`, `possono`, `potrebbe`, `potrebbero`, `dovrebbe`, `dovrebbero` o `eventualmente`; un'opzione lasciata a una parte deve essere espressa nominando la parte che sceglie.
+
+#### Details
+Il testo in code span, i messaggi citati e i nomi di elementi tra «» non sono formulazione dell'obbligo. Le sezioni Details dei requisiti sono indicazioni e non vengono controllate. Una formula permissiva rende ambiguo se il comportamento è obbligatorio, facoltativo o scelto da qualcuno, e il codice e il modello finiscono per darne letture diverse.
+
+#### Metadata
+  * type: requirement
+
+#### Contract References
+  * [Script di integrità del modello](../Contracts/TerminalConversation.md#script-di-integrità-del-modello)
+
+#### Relations
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
 ### Identificazione del client terminale nella sessione
 
 Quando il client apre la sessione conversazionale, deve presentarsi al backend con un identificativo di client stabile e un nome leggibile, configurabili all'avvio e con un valore predefinito ricavato dalla macchina.
@@ -81,8 +165,29 @@ Quando il client apre la sessione conversazionale, deve presentarsi al backend c
 #### Metadata
   * type: requirement
 
+#### Contract References
+  * [Catalogo dei testi del client terminale](../Contracts/TerminalConversation.md#catalogo-dei-testi-del-client-terminale)
+
 #### Relations
   * satisfiedBy: [cli.ts](../../src/cli.ts)
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
+### Installazione delle dipendenze con pnpm
+
+Quando si installano le dipendenze del client terminale, l'installazione deve usare pnpm alla versione dichiarata nel repository e il lockfile versionato senza modificarlo, deve ammettere gli script di build soltanto alle dipendenze elencate nella configurazione di pnpm e deve applicare l'attesa minima di pnpm per le versioni appena pubblicate.
+
+#### Details
+Lo stesso gestore di pacchetti e le stesse regole di installazione usate da backend e satellite rendono riproducibili le installazioni locali e in CI e limitano l'esecuzione di codice delle dipendenze durante l'installazione.
+
+#### Metadata
+  * type: requirement
+
+#### Relations
+  * satisfiedBy: [ci.yml](../../.github/workflows/ci.yml)
+  * satisfiedBy: [package.json](../../package.json)
+  * satisfiedBy: [pnpm-lock.yaml](../../pnpm-lock.yaml)
+  * satisfiedBy: [pnpm-workspace.yaml](../../pnpm-workspace.yaml)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
@@ -104,7 +209,7 @@ Quando la famiglia invia un turno testuale dal client terminale, il client deve 
 
 ### Invito ad aggiornare la conversazione in elaborazione
 
-Quando una conversazione riaperta nel client della chat testuale mostra un turno «In elaborazione» («In progress» con l'interfaccia in inglese), il client deve invitare la persona ad aggiornare manualmente la consultazione più tardi per consultarne l'esito.
+Quando il client terminale mostra in una conversazione consultata un turno nello stato `pending`, il client deve invitare la persona ad aggiornare manualmente la consultazione più tardi per conoscerne l'esito.
 
 #### Metadata
   * type: requirement
@@ -177,6 +282,22 @@ Quando il client terminale riceve `turn.failed` per un turno ammesso, deve mostr
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
+### Protezione dei workflow di CI
+
+Ogni workflow GitHub Actions del repository deve concedere al token del workflow soltanto la lettura dei contenuti, deve usare action di terzi fissate a un commit, deve limitare la durata di ogni job, deve eseguire il checkout senza conservare le credenziali e deve dichiarare il trigger con cui altri workflow lo richiamano.
+
+#### Details
+Un'action indicata con un tag mobile o un token con permessi di scrittura espongono il repository a modifiche non revisionate; un job senza limite di durata occupa il runner fino al limite della piattaforma.
+
+#### Metadata
+  * type: requirement
+
+#### Relations
+  * satisfiedBy: [ci.yml](../../.github/workflows/ci.yml)
+  * satisfiedBy: [secret-scan.yml](../../.github/workflows/secret-scan.yml)
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
 ### Repository autonomo del client terminale
 
 Il client terminale deve essere sviluppato e versionato nel repository `ambrogio-cli`, con workspace Reqvire canonico alla propria radice e decisioni tecniche del client registrate nel proprio modello.
@@ -239,6 +360,9 @@ Quando viene eseguito un push su qualunque branch o viene proposta una pull requ
 #### Metadata
   * type: requirement
 
+#### Contract References
+  * [Profilo di protezione dei workflow GitHub Actions](../Contracts/TerminalConversation.md#profilo-di-protezione-dei-workflow-github-actions)
+
 #### Relations
   * satisfiedBy: [secret-scan.yml](../../.github/workflows/secret-scan.yml)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
@@ -265,19 +389,25 @@ Il client terminale deve essere implementato in TypeScript per Node.js e offrire
   * type: requirement
 
 #### Contract References
+  * [Installazione con pnpm 12.11.2](../Contracts/TerminalConversation.md#installazione-con-pnpm-12112)
   * [Schermata conversazionale a due pannelli](../Contracts/TerminalConversation.md#schermata-conversazionale-a-due-pannelli)
 
 #### Relations
+  * satisfiedBy: [.gitignore](../../.gitignore)
   * satisfiedBy: [package.json](../../package.json)
+  * satisfiedBy: [tsconfig.json](../../tsconfig.json)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
 ### Stato del turno in elaborazione alla riapertura
 
-Quando la famiglia consulta tramite un client della chat testuale una conversazione con un turno testuale accettato il cui esito non è ancora conservato, Ambrogio deve mostrare quel turno come «In elaborazione» («In progress» con l'interfaccia in inglese); a una nuova consultazione dopo la conservazione dell'esito deve mostrare lo scambio concluso.
+Quando lo storico di una conversazione consultata nel client terminale contiene un turno nello stato `pending`, il client deve mostrare il testo di quel turno seguito dall'indicazione del turno in elaborazione, distinta dagli scambi conclusi; a una nuova consultazione in cui lo storico riporta l'esito conservato del turno, il client deve mostrare lo scambio concluso al posto di quell'indicazione.
 
 #### Metadata
   * type: requirement
+
+#### Contract References
+  * [Contratti pubblici del backend Ambrogio](../Contracts/TerminalConversation.md#contratti-pubblici-del-backend-ambrogio)
 
 #### Relations
   * satisfiedBy: [tui.ts](../../src/tui.ts)
@@ -299,6 +429,38 @@ Mentre il client è attivo, il client deve presentare nella lingua dell'interfac
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
+### Verifiche manuali giustificate
+
+Ogni verifica di ispezione, analisi o dimostrazione deve indicare il motivo per cui non è automatizzabile, in una frase che inizia con «Non automatizzabile:».
+
+#### Details
+Una verifica automatizzabile è una verifica di test. Reqvire registra che una verifica esiste, non che sia stata eseguita: una verifica manuale non ripetuta dopo una modifica lascia passare una violazione del requisito.
+
+#### Metadata
+  * type: requirement
+
+#### Contract References
+  * [Script di integrità del modello](../Contracts/TerminalConversation.md#script-di-integrità-del-modello)
+
+#### Relations
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
+### Versioni esatte delle dipendenze dirette
+
+Il manifest `package.json` del client terminale deve dichiarare ogni dipendenza diretta con una versione esatta, uguale a quella risolta nel lockfile, senza intervalli di versione.
+
+#### Details
+Una versione esatta rende esplicito nel manifest ogni aggiornamento di dipendenza e lo sottopone a revisione; gli intervalli `^` e `~` lasciano al lockfile la scelta effettiva della versione.
+
+#### Metadata
+  * type: requirement
+
+#### Relations
+  * satisfiedBy: [package.json](../../package.json)
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
 ### Vista persistente della conversazione
 
 Quando il client è attivo in un terminale interattivo, deve mostrare l'elenco delle conversazioni a sinistra e la conversazione corrente a destra, mantenendo visibili la conversazione e il campo di scrittura mentre la persona compone, invia e riceve un turno.
@@ -306,8 +468,10 @@ Quando il client è attivo in un terminale interattivo, deve mostrare l'elenco d
 #### Metadata
   * type: requirement
 
+#### Contract References
+  * [Catalogo dei testi del client terminale](../Contracts/TerminalConversation.md#catalogo-dei-testi-del-client-terminale)
+
 #### Relations
   * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
-

@@ -7,4 +7,3 @@ La famiglia interagisce con Ambrogio da un terminale: invia turni testuali, osse
 #### Metadata
   * type: capability
 ---
-

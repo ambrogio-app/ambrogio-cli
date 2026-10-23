@@ -44,7 +44,8 @@ flowchart LR
 
 ## Dependencies
 
-- Node.js 22 or later, with npm
+- Node.js 24 or later
+- [pnpm](https://pnpm.io/) 12.11.2, the version in `packageManager` of `package.json`: `npm install --global pnpm@12.11.2`
 - An interactive terminal of at least 70 × 14 characters
 - A running [ambrogio-backend](https://github.com/ambrogio-app/ambrogio-backend) that this machine can reach
 - Runtime library: [Terminal Kit](https://github.com/cronvel/terminal-kit). The client uses Node's built-in `WebSocket` and `fetch`
@@ -54,9 +55,9 @@ The backend version this client is compatible with is recorded in [`system-model
 ## Quick start
 
 ```bash
-npm ci
-npm run build
-npm start -- --server http://my-ambrogio:3000
+pnpm install --frozen-lockfile
+pnpm build
+pnpm start --server http://my-ambrogio:3000
 ```
 
 You can also set the server with `AMBROGIO_URL`, and the client ID with `--client-id` or `AMBROGIO_CLIENT_ID`. There is no default server URL.
@@ -75,11 +76,13 @@ The interface language is `--language it|en` or `AMBROGIO_LANGUAGE`. Without the
 ## Development
 
 ```bash
-npm test               # protocol and UI tests against a local fake backend
-npm run test:backend   # end-to-end test against a pinned ambrogio-backend checkout
+pnpm test               # protocol and UI tests against a local fake backend
+pnpm test:backend       # end-to-end test against a pinned ambrogio-backend checkout
 ```
 
-`npm run test:backend` expects a built checkout of `ambrogio-backend` at `../ambrogio-backend`, or at the path in `AMBROGIO_BACKEND_REPO`.
+`pnpm test:backend` expects a built checkout of `ambrogio-backend` at the pinned revision, at `../ambrogio-backend` or at the path in `AMBROGIO_BACKEND_REPO`. It runs the backend in the same process.
+
+Dependencies are pinned to exact versions in `package.json` and resolved in `pnpm-lock.yaml`. `pnpm-workspace.yaml` allows no dependency build scripts, and pnpm's default minimum release age for new versions stays on.
 
 [gitleaks](https://github.com/gitleaks/gitleaks) 8.30.1 checks for secrets. CI scans the whole history on every push and pull request (`.github/workflows/secret-scan.yml`). Locally, enable the versioned pre-commit hook once per clone; it needs `gitleaks` on `PATH` and blocks commits that add a secret:
 

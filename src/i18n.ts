@@ -76,7 +76,7 @@ export type Texts = {
 
 export const texts: Record<Language, Texts> = {
   it: {
-    usage: 'Uso: npm start -- --server http://host:porta [--client-id identificativo] [--language it|en]\n'
+    usage: 'Uso: pnpm start --server http://host:porta [--client-id identificativo] [--language it|en]\n'
       + 'Oppure imposta AMBROGIO_URL, AMBROGIO_CLIENT_ID e AMBROGIO_LANGUAGE.\n',
     invalidOptions: 'Opzioni non valide.',
     missingUrl: 'Indica l’URL del backend.',
@@ -126,7 +126,7 @@ export const texts: Record<Language, Texts> = {
     messageTooLarge: 'Messaggio troppo grande (massimo 64 KiB).',
   },
   en: {
-    usage: 'Usage: npm start -- --server http://host:port [--client-id identifier] [--language it|en]\n'
+    usage: 'Usage: pnpm start --server http://host:port [--client-id identifier] [--language it|en]\n'
       + 'Or set AMBROGIO_URL, AMBROGIO_CLIENT_ID and AMBROGIO_LANGUAGE.\n',
     invalidOptions: 'Invalid options.',
     missingUrl: 'Specify the backend URL.',

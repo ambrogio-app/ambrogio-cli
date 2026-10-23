@@ -9,7 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const cli = fileURLToPath(new URL('..', import.meta.url));
 const root = resolve(process.env.AMBROGIO_BACKEND_REPO ?? resolve(cli, '../ambrogio-backend'));
-const expectedCommit = '58b0df420aee7c08280afd818ffcd0e82b060029';
+const expectedCommit = 'a570c013617fe7b9e944063dfd67ce2c00da398e';
 const actualCommit = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 assert.equal(actualCommit, expectedCommit, 'Il backend locale deve essere al commit dichiarato nel contratto del client.');
 const { startConversationServer } = await import(pathToFileURL(`${root}/apps/server/dist/runtime/conversation-server.js`));
@@ -35,10 +35,13 @@ try {
   probe.close();
   await once(probe, 'close');
 
-  const httpConfig = join(directory, 'http.json');
-  const conversationsConfig = join(directory, 'conversations.json');
-  await writeFile(httpConfig, JSON.stringify({ host: '127.0.0.1', port }));
-  await writeFile(conversationsConfig, JSON.stringify({ archivePath: join(directory, 'archive.sqlite'), language: 'it' }));
+  // The pinned backend loads each component configuration from a TypeScript module ending in `.ts`
+  // that exports the configuration object by default.
+  const httpConfig = join(directory, 'http.ts');
+  const conversationsConfig = join(directory, 'conversations.ts');
+  await writeFile(httpConfig, `export default ${JSON.stringify({ host: '127.0.0.1', port })};\n`);
+  await writeFile(conversationsConfig,
+    `export default ${JSON.stringify({ archivePath: join(directory, 'archive.sqlite'), language: 'it' })};\n`);
   runtime = await startConversationServer({ AMBROGIO_HTTP_CONFIG_PATH: httpConfig,
     AMBROGIO_CONVERSATIONS_CONFIG_PATH: conversationsConfig }, directory,
   async () => ({ orchestrator: { async *produce(history) {

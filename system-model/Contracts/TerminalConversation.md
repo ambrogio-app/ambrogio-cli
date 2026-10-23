@@ -2,7 +2,7 @@
 
 ### Avvio locale del client da checkout
 
-La prima versione utilizzabile si avvia dal checkout del repository mediante npm dopo l'installazione delle dipendenze. Il repository contiene script riproducibili per compilare, eseguire test e avviare il client. La distribuzione come pacchetto CLI installabile resta una capacità successiva.
+La prima versione utilizzabile si avvia dal checkout del repository con `pnpm start` dopo l'installazione delle dipendenze con pnpm. Il client richiede Node.js 24 o successivo, dichiarato in `package.json` con `engines.node` `>=24`; compilazione, test e CI usano Node.js 24. Il repository contiene script riproducibili per compilare (`pnpm build`), controllare i tipi (`pnpm typecheck`), eseguire test (`pnpm test` e `pnpm test:backend`) e avviare il client. La distribuzione come pacchetto CLI installabile resta una capacità successiva. La compilazione usa `tsc -p tsconfig.json` con `strict`, `noUncheckedIndexedAccess`, `module` e `moduleResolution` `NodeNext`, `target` `ES2022` e librerie `ES2022` e `DOM`, e compila `src/` e `test/` in `dist/`. Le dipendenze installate in `node_modules/` e l'output `dist/` sono esclusi dal versionamento con `.gitignore`.
 
 #### Metadata
   * type: specification
@@ -13,13 +13,13 @@ La prima versione utilizzabile si avvia dal checkout del repository mediante npm
 
 ### Catalogo dei testi del client terminale
 
-Decisione concordata con la persona il 18 ottobre 2026: ogni testo prodotto dal client esiste in italiano e in inglese con la formulazione esatta indicata qui; il codice raccoglie il catalogo in un solo modulo e i due elenchi hanno le stesse voci. I segnaposto fra parentesi angolari sono sostituiti dal valore effettivo: `<host>` dal nome host, `<n>` dal codice HTTP, `<dettaglio>` dal messaggio dell'errore locale o pubblico, `<testo>` dal testo del turno della persona. Le righe dell'indicazione d'uso terminano con un a capo. Il titolo « AMBROGIO · Chat» e il prefisso «Ambrogio: » sono identici nelle due lingue. Testi, risposte e messaggi pubblici ricevuti dal backend non fanno parte del catalogo e non sono tradotti.
+Ogni testo prodotto dal client esiste in italiano e in inglese con la formulazione esatta indicata qui; il codice raccoglie il catalogo in un solo modulo e i due elenchi hanno le stesse voci. I segnaposto fra parentesi angolari sono sostituiti dal valore effettivo: `<host>` dal nome host, `<n>` dal codice HTTP, `<dettaglio>` dal messaggio dell'errore locale o pubblico, `<testo>` dal testo del turno della persona. Le righe dell'indicazione d'uso terminano con un a capo. Il titolo « AMBROGIO · Chat» e il prefisso «Ambrogio: » sono identici nelle due lingue. Testi, risposte e messaggi pubblici ricevuti dal backend non fanno parte del catalogo e non sono tradotti.
 
 **Avvio e identità**
 
 | Uso | Italiano | Inglese |
 |---|---|---|
-| Indicazione d'uso, prima riga | `Uso: npm start -- --server http://host:porta [--client-id identificativo] [--language it\|en]` | `Usage: npm start -- --server http://host:port [--client-id identifier] [--language it\|en]` |
+| Indicazione d'uso, prima riga | `Uso: pnpm start --server http://host:porta [--client-id identificativo] [--language it\|en]` | `Usage: pnpm start --server http://host:port [--client-id identifier] [--language it\|en]` |
 | Indicazione d'uso, seconda riga | `Oppure imposta AMBROGIO_URL, AMBROGIO_CLIENT_ID e AMBROGIO_LANGUAGE.` | `Or set AMBROGIO_URL, AMBROGIO_CLIENT_ID and AMBROGIO_LANGUAGE.` |
 | Opzioni o lingua non valide | `Opzioni non valide.` | `Invalid options.` |
 | URL del backend assente | `Indica l’URL del backend.` | `Specify the backend URL.` |
@@ -97,7 +97,7 @@ Decisione concordata con la persona il 18 ottobre 2026: ogni testo prodotto dal 
 
 ### Contratti pubblici del backend Ambrogio
 
-Il backend `ambrogio-backend` è la fonte autorevole del protocollo conversazionale `ambrogio.v1` e delle rotte HTTP di consultazione. La versione di riferimento è il commit `58b0df420aee7c08280afd818ffcd0e82b060029` del backend. Per i turni si consultano i contratti `Sessione del protocollo Ambrogio v1`, `Trasmissione in ingresso del protocollo Ambrogio v1`, `Trasmissione in uscita del protocollo Ambrogio v1`, `Esiti del turno nel protocollo Ambrogio v1`, `Motivi di rifiuto del turno` ed `Errori ed estensioni del protocollo Ambrogio v1` nel [modello del protocollo del backend](https://github.com/ambrogio-app/ambrogio-backend/blob/58b0df420aee7c08280afd818ffcd0e82b060029/system-model/Contracts/ConversationProtocol.md), con la forma dei messaggi definita da [`protocol/ambrogio-v1.schema.json`](https://github.com/ambrogio-app/ambrogio-backend/blob/58b0df420aee7c08280afd818ffcd0e82b060029/protocol/ambrogio-v1.schema.json) alla stessa revisione. Per la consultazione si usano `Risposta HTTP dell'elenco conversazioni` e `Risposta HTTP dello storico conversazionale` nel [modello dei contratti del backend](https://github.com/ambrogio-app/ambrogio-backend/blob/58b0df420aee7c08280afd818ffcd0e82b060029/system-model/Contracts/FamilyConversation.md). Questa revisione sostituisce la precedente `c057ced962b37f7d605c675ffb6da44825d67496`, basata sul profilo SSE ora rimosso dal backend. Messaggi ed endpoint effettivi vanno verificati con prove di integrazione contro la revisione indicata, nelle quali il backend valida i messaggi con lo schema. Un cambiamento di contratto nel backend richiede revisione esplicita di questo modello e delle verifiche del client.
+Il backend `ambrogio-backend` è la fonte autorevole del protocollo conversazionale `ambrogio.v1` e delle rotte HTTP di consultazione. Il client è compatibile con il tag `v0.8.0` del backend, commit `a570c013617fe7b9e944063dfd67ce2c00da398e`. Per i turni si consultano i contratti `Sessione del protocollo Ambrogio v1`, `Trasmissione in ingresso del protocollo Ambrogio v1`, `Trasmissione in uscita del protocollo Ambrogio v1`, `Esiti del turno nel protocollo Ambrogio v1`, `Motivi di rifiuto del turno` ed `Errori ed estensioni del protocollo Ambrogio v1` nel [modello del protocollo del backend](https://github.com/ambrogio-app/ambrogio-backend/blob/a570c013617fe7b9e944063dfd67ce2c00da398e/system-model/Contracts/ConversationProtocol.md), con la forma dei messaggi definita da [`protocol/ambrogio-v1.schema.json`](https://github.com/ambrogio-app/ambrogio-backend/blob/a570c013617fe7b9e944063dfd67ce2c00da398e/protocol/ambrogio-v1.schema.json) alla stessa revisione. Per la consultazione si usano `Risposta HTTP dell'elenco conversazioni`, `Risposta HTTP dello storico conversazionale` e `Stati persistenti dei turni conversazionali` nel [modello dei contratti del backend](https://github.com/ambrogio-app/ambrogio-backend/blob/a570c013617fe7b9e944063dfd67ce2c00da398e/system-model/Contracts/FamilyConversation.md). Messaggi ed endpoint effettivi sono verificati con prove di integrazione contro la revisione indicata, nelle quali il backend valida i messaggi con lo schema. Un cambiamento di contratto nel backend richiede revisione esplicita di questo modello e delle verifiche del client.
 
 #### Metadata
   * type: source
@@ -108,7 +108,7 @@ Il backend `ambrogio-backend` è la fonte autorevole del protocollo conversazion
 
 ### Identità del client terminale nella sessione
 
-Decisione concordata il 17 ottobre 2026: il `clientId` inviato con `session.hello` vale per impostazione predefinita `cli-<nome host>` e può essere sostituito con l'opzione di avvio `--client-id` o con la variabile `AMBROGIO_CLIENT_ID`; l'opzione prevale sulla variabile. Il `name` vale `Terminale <nome host>` con l'interfaccia in italiano e `Terminal <nome host>` con l'interfaccia in inglese, secondo il catalogo dei testi del client deciso il 18 ottobre 2026. Un valore vuoto non è ammesso. L'identità serve al backend per distinguere i client nelle sessioni e resta stabile tra un avvio e l'altro sulla stessa macchina finché la configurazione non cambia; il `clientId` non dipende dalla lingua.
+Il `clientId` inviato con `session.hello` vale per impostazione predefinita `cli-<nome host>`; quando la persona indica l'opzione di avvio `--client-id` o la variabile `AMBROGIO_CLIENT_ID`, il client usa il valore indicato al posto di quello predefinito, e l'opzione prevale sulla variabile. Il `name` è il testo della voce «Nome inviato con `session.hello`» del catalogo dei testi del client terminale nella lingua dell'interfaccia, con il nome host della macchina al posto del segnaposto. Un valore vuoto non è ammesso. L'identità serve al backend per distinguere i client nelle sessioni e resta stabile tra un avvio e l'altro sulla stessa macchina finché la configurazione non cambia; il `clientId` non dipende dalla lingua.
 
 #### Metadata
   * type: specification
@@ -128,11 +128,41 @@ Prima di iniziare l'interazione, il client richiede un URL base HTTP o HTTPS del
   * define: [Client conversazionale nel terminale](../Requirements/TerminalConversation.md#client-conversazionale-nel-terminale)
 ---
 
+### Installazione con pnpm 12.11.2
+
+Il client usa pnpm 12.11.2, dichiarato in `package.json` con `packageManager` `pnpm@12.11.2`, e il lockfile versionato `pnpm-lock.yaml`; il repository non contiene `package-lock.json`. La CI installa pnpm 12.11.2 e le dipendenze con `pnpm install --frozen-lockfile`, che fallisce se manifest e lockfile divergono. `pnpm-workspace.yaml` dichiara `allowBuilds` vuoto, perché nessuna dipendenza del client richiede script di build; una dipendenza che li richiede entra nell'elenco soltanto con una decisione registrata in questo contratto. L'attesa predefinita di pnpm di 24 ore per le nuove versioni pubblicate resta attiva e `pnpm-workspace.yaml` non dichiara eccezioni in `minimumReleaseAgeExclude`.
+
+#### Metadata
+  * type: specification
+
+#### Relations
+  * define: [Installazione delle dipendenze con pnpm](../Requirements/TerminalConversation.md#installazione-delle-dipendenze-con-pnpm)
+---
+
+### Profilo di protezione dei workflow GitHub Actions
+
+I workflow `.github/workflows/ci.yml` e `.github/workflows/secret-scan.yml` applicano questi valori:
+
+- `permissions: contents: read` al livello del workflow, senza altri permessi per i job;
+- `actions/checkout` fissato al commit `d23441a48e516b6c34aea4fa41551a30e30af803` (v6), con `persist-credentials: false`, in entrambi i workflow; `actions/setup-node` fissato al commit `249970729cb0ef3589644e2896645e5dc5ba9c38` (v6), con `package-manager-cache: false`, in `ci.yml`; il commento accanto al commit indica la versione principale dell'action;
+- `runs-on: ubuntu-24.04` e `timeout-minutes` pari a 15 per il job `checks` di `ci.yml` e a 10 per il job `gitleaks` di `secret-scan.yml`;
+- il trigger `workflow_call` in entrambi i workflow, oltre ai trigger propri di ciascuno;
+- nessun blocco `concurrency`.
+
+Un aggiornamento di un'action cambia insieme il commit e il commento della versione in questo contratto e nei workflow.
+
+#### Metadata
+  * type: specification
+
+#### Relations
+  * define: [Protezione dei workflow di CI](../Requirements/TerminalConversation.md#protezione-dei-workflow-di-ci)
+---
+
 ### Profilo di scansione dei segreti con gitleaks
 
-Decisione concordata con la persona il 18 ottobre 2026: il repository del client usa gitleaks per impedire che segreti, come chiavi API o token, entrino nella storia Git. Il controllo avviene in due punti.
+Il repository del client usa gitleaks per impedire che segreti, come chiavi API o token, entrino nella storia Git. Il controllo avviene in due punti.
 
-- **CI.** Il workflow `.github/workflows/secret-scan.yml` si esegue a ogni push su qualunque branch, a ogni pull request, su richiesta manuale e come workflow richiamabile. Recupera l'intera storia con `actions/checkout` fissato al commit `d23441a48e516b6c34aea4fa41551a30e30af803` (v6), `fetch-depth: 0` e `persist-credentials: false`. Scarica dalla release ufficiale gitleaks v8.30.1, archivio `gitleaks_8.30.1_linux_x64.tar.gz`, ne verifica lo SHA-256 `551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb` prima di estrarlo e interrompe il job se l'impronta non corrisponde. Esegue `gitleaks git --redact --no-banner --exit-code 1 .` sull'intera storia: un rilevamento fa fallire il job e l'output non riporta il valore del segreto.
+- **CI.** Il workflow `.github/workflows/secret-scan.yml` si esegue a ogni push su qualunque branch, a ogni pull request, su richiesta manuale e come workflow richiamabile. Recupera l'intera storia con `fetch-depth: 0`, usando il checkout definito dal profilo di protezione dei workflow GitHub Actions. Scarica dalla release ufficiale gitleaks v8.30.1, archivio `gitleaks_8.30.1_linux_x64.tar.gz`, ne verifica lo SHA-256 `551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb` prima di estrarlo e interrompe il job se l'impronta non corrisponde. Esegue `gitleaks git --redact --no-banner --exit-code 1 .` sull'intera storia: un rilevamento fa fallire il job e l'output non riporta il valore del segreto.
 - **Hook locale.** Lo script POSIX versionato `.githooks/pre-commit` esegue `gitleaks git --pre-commit --staged --redact --no-banner .` sulle modifiche in staging. Se `gitleaks` non è disponibile nel `PATH`, stampa un messaggio che indica come installarlo e termina con esito non riuscito, impedendo il commit. L'hook si attiva in ogni clone con `git config core.hooksPath .githooks`; l'attivazione è locale e non è imposta dal repository.
 
 Si usa la configurazione predefinita di gitleaks, senza file `.gitleaks.toml`, finché non emergono falsi positivi da gestire esplicitamente. Un aggiornamento di gitleaks cambia insieme versione e impronta in questo contratto e nel workflow.
@@ -149,14 +179,14 @@ Sono state considerate l'action ufficiale `gitleaks/gitleaks-action`, che richie
 
 ### Scelta della lingua del client terminale
 
-Decisione concordata con la persona il 18 ottobre 2026: l'interfaccia del client è disponibile in italiano (`it`) e in inglese (`en`). Sostituisce la scelta implicita della prima versione, in cui tutti i testi del client erano soltanto in italiano.
+L'interfaccia del client è disponibile in italiano (`it`) e in inglese (`en`).
 
 La lingua si sceglie all'avvio con l'opzione `--language <it|en>` o con la variabile `AMBROGIO_LANGUAGE`; l'opzione prevale sulla variabile. Una variabile vuota equivale a una variabile assente. Un valore diverso da `it` o `en`, nell'opzione o nella variabile, è un'opzione non valida: l'avvio termina con codice `2`, il messaggio «Opzioni non valide.» e l'indicazione d'uso. Senza opzione né variabile, il client segue la lingua del sistema: considera il primo valore non vuoto fra `LC_ALL`, `LC_MESSAGES` e `LANG`; se inizia con `it` la lingua è l'italiano, altrimenti l'inglese, anche quando nessuna delle tre variabili è impostata o il valore è `C` o `POSIX`. La variabile GNU `LANGUAGE` non è considerata.
 
 Le indicazioni d'uso e i messaggi dell'avvio, compreso quello per una lingua non valida e la risposta a `--help`, usano la lingua stabilita senza il valore non valido: l'opzione o la variabile valide, altrimenti la lingua del sistema. La lingua resta la stessa per tutto il processo e non dipende dalla lingua configurata nel backend; i testi ricevuti dal backend sono mostrati così come arrivano.
 
 #### Alternative e conseguenze
-Sono state considerate un'opzione con valore predefinito inglese, allineato al backend, e un'opzione con valore predefinito italiano, che non cambiava il comportamento esistente. Seguire la lingua del sistema replica lo schema della chat web, che segue la lingua del browser con l'inglese come ripiego, e offre la lingua attesa senza configurazione; chi usa un sistema con lingua diversa dall'italiano ottiene l'inglese anche se il backend è configurato in italiano, e può scegliere esplicitamente con l'opzione o la variabile.
+Sono state considerate un'opzione con valore predefinito inglese, allineato al backend, e un'opzione con valore predefinito italiano, che non cambiava il comportamento esistente. Seguire la lingua del sistema replica lo schema della chat web, che segue la lingua del browser con l'inglese come ripiego, e offre la lingua attesa senza configurazione; chi usa un sistema con lingua diversa dall'italiano ottiene l'inglese anche se il backend è configurato in italiano, finché non sceglie la lingua con l'opzione o la variabile.
 
 #### Metadata
   * type: specification
@@ -167,7 +197,7 @@ Sono state considerate un'opzione con valore predefinito inglese, allineato al b
 
 ### Schermata conversazionale a due pannelli
 
-Il client usa Terminal Kit per una schermata interattiva persistente. All'avvio una voce locale «Nuova chat» («New chat» con l'interfaccia in inglese) è selezionata come prima voce; non crea una conversazione vuota sul backend. Quando il primo turno è inviato, la voce prende come nome l'anteprima del testo inviato e resta la chat corrente anche durante la risposta. La barra laterale a sinistra mostra le conversazioni paginabili con l'anteprima del primo messaggio della persona, ricavata dagli storici HTTP pubblici delle sole chat visibili. Se il recupero di uno storico fallisce, la voce resta selezionabile con ID abbreviato. Il pannello destro conserva lo storico della chat selezionata, la risposta in generazione e il campo di scrittura per tutta l'interazione; inviare un turno non torna a una schermata di menu. `Tab` sposta il focus tra barra laterale e campo di scrittura; nell'elenco le frecce cambiano selezione e `Invio` apre la chat. La schermata indica i comandi per nuova chat, aggiornamento manuale, pagina successiva e uscita. Al ridimensionamento del terminale il client ricalcola i pannelli; quando lo spazio non consente due pannelli leggibili chiede di allargare il terminale senza perdere la conversazione corrente. Le formulazioni di etichette, comandi, stati e avvisi della schermata nelle due lingue sono quelle del catalogo dei testi del client.
+Il client usa Terminal Kit per una schermata interattiva persistente. All'avvio la voce locale della nuova chat, con il testo della voce «Voce della nuova chat» del catalogo dei testi del client terminale, è selezionata come prima voce; non crea una conversazione vuota sul backend. Quando il primo turno è inviato, la voce prende come nome l'anteprima del testo inviato e resta la chat corrente anche durante la risposta. La barra laterale a sinistra mostra le conversazioni paginabili con l'anteprima del primo messaggio della persona, ricavata dagli storici HTTP pubblici delle sole chat visibili. Se il recupero di uno storico fallisce, la voce resta selezionabile con ID abbreviato. Il pannello destro conserva lo storico della chat selezionata, la risposta in generazione e il campo di scrittura per tutta l'interazione; inviare un turno non torna a una schermata di menu. `Tab` sposta il focus tra barra laterale e campo di scrittura; nell'elenco le frecce cambiano selezione e `Invio` apre la chat. La schermata indica i comandi per nuova chat, aggiornamento manuale, pagina successiva e uscita. Al ridimensionamento del terminale il client ricalcola i pannelli; quando lo spazio non consente due pannelli leggibili chiede di allargare il terminale senza perdere la conversazione corrente. Le formulazioni di etichette, comandi, stati e avvisi della schermata nelle due lingue sono quelle del catalogo dei testi del client.
 
 #### Metadata
   * type: specification
@@ -176,9 +206,27 @@ Il client usa Terminal Kit per una schermata interattiva persistente. All'avvio 
   * define: [Vista persistente della conversazione](../Requirements/TerminalConversation.md#vista-persistente-della-conversazione)
 ---
 
+### Script di integrità del modello
+
+Lo script `scripts/check-model.mjs` legge il modello con Reqvire 1.3.2 (`search --filter-type <tipo> --json` e `resources`) e i file tracciati con `git ls-files`, e segnala:
+
+- ogni requisito, contratto o verifica il cui testo, tolti code span, testi tra virgolette e nomi tra «», contiene una data (ISO `AAAA-MM-GG` oppure giorno, nome del mese e anno, in italiano o in inglese) o le formule `concordato il`, `concordata il`, `deciso il`, `decisa il`, `scelto il`, `scelta il`, anche con `con la persona`, `agreed on` e `decided on`;
+- ogni occorrenza, come parola intera e senza distinzione di maiuscole, di `può`, `possono`, `potrebbe`, `potrebbero`, `dovrebbe`, `dovrebbero`, `eventualmente`, `may`, `might`, `could`, `should` e `possibly` nell'enunciato di un requisito (il testo prima della sezione `#### Details`) o nel testo di un contratto, tolti code span, testi tra virgolette e nomi tra «»;
+- ogni verifica di ispezione, analisi o dimostrazione il cui contenuto non contiene `Non automatizzabile:`;
+- ogni file tracciato che corrisponde a `.github/workflows/**`, `.githooks/**`, `scripts/**`, `Dockerfile*`, `compose*.yaml`, `compose*.yml`, `.dockerignore`, `.gitignore`, `.npmrc`, `package.json`, `tsconfig*.json`, `vitest*.config.*`, a qualunque profondità, oppure a `pnpm-workspace.yaml` nella radice, e che nessun elemento del modello riferisce.
+
+Lo script stampa una riga per violazione e termina con stato 1 se ne trova almeno una, con stato 0 altrimenti. La CI lo esegue con `node scripts/check-model.mjs` dopo `validate` e `lint`.
+
+#### Metadata
+  * type: specification
+
+#### Relations
+  * define: [Controllo automatico dell'integrità del modello](../Requirements/TerminalConversation.md#controllo-automatico-dellintegrità-del-modello)
+---
+
 ### Sessione ambrogio.v1 del client terminale
 
-Decisione concordata il 17 ottobre 2026: il client usa il `WebSocket` integrato in Node.js, senza dipendenze aggiuntive per il trasporto; per questo richiede Node.js 22 o successivo. La sessione si connette a `api/session` sotto l'URL base del backend, con schema `ws:` per `http:` e `wss:` per `https:`, offrendo il sottoprotocollo `ambrogio.v1`; dopo `session.hello` attende `session.ready`. Una sola sessione per processo trasporta i turni di tutte le conversazioni; si apre al primo turno e, se si chiude, si riapre al turno successivo.
+Il client usa il `WebSocket` integrato in Node.js, disponibile nella versione minima di Node.js richiesta dal client, senza dipendenze aggiuntive a runtime per il trasporto. La sessione si connette a `api/session` sotto l'URL base del backend, con schema `ws:` per `http:` e `wss:` per `https:`, offrendo il sottoprotocollo `ambrogio.v1`; dopo `session.hello` attende `session.ready`. Una sola sessione per processo trasporta i turni di tutte le conversazioni; si apre al primo turno e, se si chiude, si riapre al turno successivo.
 
 Ogni turno è una richiesta testuale: `input.start` con `requestId` e `stream` nuovi, `content` `{"type":"text"}`, `reply` `"text"` e `conversationId` quando si continua una conversazione; il testo in un solo `input.chunk`; poi `input.end`. Il client controlla prima dell'invio che il testo non sia vuoto e non superi 64 KiB in UTF-8. Dopo `turn.accepted` il client conserva `conversationId` e `turnId` e mostra, nell'ordine ricevuto, i frammenti `output.chunk` delle trasmissioni del turno. Il turno è riuscito soltanto con `turn.completed`; `turn.failed` e `turn.rejected` concludono il turno con il loro `message`, che sostituisce i frammenti mostrati; `turn.interrupted`, oppure la chiusura della sessione prima dell'esito, concludono localmente il turno come interrotto. Un `session.error` riferito alla richiesta conclude il turno con un errore locale. Il client ignora `expectsReply`, perché il campo di scrittura resta sempre disponibile, e risponde con `client.result`, `ok: false` e `reason: "unsupported"`, a ogni messaggio del server non legato a un turno che contenga `id`. La sessione non trasferisce al client la produzione della risposta o la persistenza del turno.
 
@@ -191,7 +239,7 @@ Ogni turno è una richiesta testuale: `input.start` con `requestId` e `stream` n
 
 ### Stati del turno testuale alla riapertura
 
-Un turno testuale accettato e ancora in elaborazione è distinguibile dagli scambi conclusi quando si consulta la conversazione. Finché l'esito non è conservato, la consultazione lo identifica come `in elaborazione` e lo associa al testo del turno; il client invita la persona ad aggiornare manualmente la consultazione più tardi. Alla successiva consultazione, se l'esito è stato conservato, il client presenta lo scambio concluso con risposta oppure errore e non presenta più per lo stesso turno lo stato `in elaborazione`. La riapertura non riprende le trasmissioni del turno, non recupera i frammenti parziali e non aggiorna automaticamente lo stato mostrato dal client. Dopo un'interruzione del processo, il turno senza esito segue lo stato `interrotto` definito nel contratto degli stati persistenti del turno testuale.
+Un turno testuale accettato e ancora in elaborazione è distinguibile dagli scambi conclusi quando si consulta la conversazione. Finché l'esito non è conservato, la consultazione lo identifica come `in elaborazione` e lo associa al testo del turno; il client invita la persona ad aggiornare manualmente la consultazione più tardi. Alla successiva consultazione, se l'esito è stato conservato, il client presenta lo scambio concluso con risposta oppure errore e non presenta più per lo stesso turno lo stato `in elaborazione`. La riapertura non riprende le trasmissioni del turno, non recupera i frammenti parziali e non aggiorna automaticamente lo stato mostrato dal client. Dopo un'interruzione del processo del backend, il turno senza esito segue lo stato `interrotto` del contratto `Stati persistenti dei turni conversazionali`, elencato fra i contratti pubblici del backend Ambrogio, e lo storico lo riporta con lo stato `interrupted`.
 
 #### Metadata
   * type: state
@@ -199,4 +247,3 @@ Un turno testuale accettato e ancora in elaborazione è distinguibile dagli scam
 #### Relations
   * define: [Stato del turno in elaborazione alla riapertura](../Requirements/TerminalConversation.md#stato-del-turno-in-elaborazione-alla-riapertura)
 ---
-
