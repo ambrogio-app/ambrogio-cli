@@ -177,6 +177,22 @@ Sono state considerate l'action ufficiale `gitleaks/gitleaks-action`, che richie
   * define: [Scansione dei segreti nella CI](../Requirements/TerminalConversation.md#scansione-dei-segreti-nella-ci)
 ---
 
+### Ruleset del branch principale
+
+Il repository GitHub ha un ruleset di branch chiamato `main`, con applicazione `active`, che ha come destinazione il branch predefinito, nessun attore escluso e le regole:
+
+- `pull_request`, che ammette l'integrazione solo tramite pull request, con `required_approving_review_count` uguale a 0;
+- `required_status_checks`, con i controlli `Terminal client checks` e `Gitleaks` prodotti da GitHub Actions e `strict_required_status_checks_policy` uguale a `false`;
+- `non_fast_forward`, che vieta la riscrittura forzata;
+- `deletion`, che vieta la cancellazione del branch.
+
+#### Metadata
+  * type: specification
+
+#### Relations
+  * define: [Controlli obbligatori prima del merge](../Requirements/TerminalConversation.md#controlli-obbligatori-prima-del-merge)
+---
+
 ### Scelta della lingua del client terminale
 
 L'interfaccia del client è disponibile in italiano (`it`) e in inglese (`en`).
@@ -247,3 +263,4 @@ Un turno testuale accettato e ancora in elaborazione è distinguibile dagli scam
 #### Relations
   * define: [Stato del turno in elaborazione alla riapertura](../Requirements/TerminalConversation.md#stato-del-turno-in-elaborazione-alla-riapertura)
 ---
+

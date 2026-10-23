@@ -62,6 +62,20 @@ I trigger sono `push` sul branch `main`, `pull_request`, `workflow_dispatch` e `
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
+### Controlli obbligatori prima del merge
+
+Quando una modifica viene integrata nel branch principale, il repository GitHub deve accettarla soltanto tramite una pull request i cui controlli della CI e scansione dei segreti sono superati, e deve rifiutare il push diretto, la riscrittura forzata e la cancellazione del branch principale.
+
+#### Details
+La regola vale per chiunque, amministratori compresi: ogni modifica passa da un branch e da una pull request, così che CI e scansione dei segreti precedano sempre l'integrazione.
+
+#### Metadata
+  * type: requirement
+
+#### Relations
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
 ### Controllo automatico dell'integrità del modello
 
 Quando la CI del repository esegue la validazione e il lint del modello Reqvire, deve eseguire anche lo script di integrità del modello e deve fallire se lo script segnala una violazione o non riesce a eseguire.
@@ -475,3 +489,4 @@ Quando il client è attivo in un terminale interattivo, deve mostrare l'elenco d
   * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
+
