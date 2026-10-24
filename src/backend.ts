@@ -38,6 +38,16 @@ const protocol = 'ambrogio.v1';
 const maxTextBytes = 65_536;
 const readyTimeoutMs = 10_000;
 
+/**
+ * The catalogue text that rejects a turn locally, before any session opens: an empty or
+ * whitespace-only text, or one larger than 64 KiB in UTF-8. Undefined when the text can be sent.
+ */
+export function textRejection(text: string, texts: Texts): string | undefined {
+  if (!text.trim()) return texts.emptyMessage;
+  if (Buffer.byteLength(text, 'utf8') > maxTextBytes) return texts.messageTooLarge;
+  return undefined;
+}
+
 export class PublicHttpError extends Error {
   constructor(readonly status: number, message: string) { super(message); }
 }
@@ -278,8 +288,8 @@ export class AmbrogioBackend {
   }
 
   async send(text: string, conversationId: string | null, onDelta: (delta: string) => void): Promise<TurnResult> {
-    if (!text.trim()) throw new Error(this.texts.emptyMessage);
-    if (Buffer.byteLength(text, 'utf8') > maxTextBytes) throw new Error(this.texts.messageTooLarge);
+    const rejection = textRejection(text, this.texts);
+    if (rejection) throw new Error(rejection);
     let session = await this.session?.catch(() => undefined);
     if (!session || session.closed) {
       this.session = ConversationSession.open(sessionUrl(this.base), this.identity, this.texts);

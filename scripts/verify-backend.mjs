@@ -1,50 +1,32 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { createServer as createPortProbe } from 'node:net';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const cli = fileURLToPath(new URL('..', import.meta.url));
 const root = resolve(process.env.AMBROGIO_BACKEND_REPO ?? resolve(cli, '../ambrogio-backend'));
-const expectedCommit = 'a570c013617fe7b9e944063dfd67ce2c00da398e';
-const actualCommit = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-assert.equal(actualCommit, expectedCommit, 'Il backend locale deve essere al commit dichiarato nel contratto del client.');
-const { startConversationServer } = await import(pathToFileURL(`${root}/apps/server/dist/runtime/conversation-server.js`));
+// The backend checked out side by side is used as it is: the commit is printed as evidence, not checked.
+const commit = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+process.stdout.write(`ambrogio-backend commit ${commit}\n`);
+// The public test entry point is the only backend module this test imports.
+const { startTestServer } = await import(pathToFileURL(`${root}/apps/server/dist/runtime/test-server.js`));
 const { AmbrogioBackend, backendUrl } = await import(pathToFileURL(`${cli}/dist/src/backend.js`));
 const { texts } = await import(pathToFileURL(`${cli}/dist/src/i18n.js`));
 const identity = { clientId: 'cli-verifica', name: 'Terminale verifica' };
 const text = value => ({ kind: 'text', text: value });
 const expectation = expectsReply => ({ kind: 'reply_expectation', expectsReply });
 
-const directory = await mkdtemp(join(tmpdir(), 'ambrogio-cli-full-server-'));
+const directory = await mkdtemp(join(tmpdir(), 'ambrogio-cli-backend-'));
 let runtime;
 let child;
 let releaseSlow = () => {};
 const slowReply = new Promise(resolve => { releaseSlow = resolve; });
 const neverReply = new Promise(() => {});
 try {
-  const probe = createPortProbe();
-  probe.listen(0, '127.0.0.1');
-  await once(probe, 'listening');
-  const reservation = probe.address();
-  assert(reservation && typeof reservation !== 'string');
-  const port = reservation.port;
-  probe.close();
-  await once(probe, 'close');
-
-  // The pinned backend loads each component configuration from a TypeScript module ending in `.ts`
-  // that exports the configuration object by default.
-  const httpConfig = join(directory, 'http.ts');
-  const conversationsConfig = join(directory, 'conversations.ts');
-  await writeFile(httpConfig, `export default ${JSON.stringify({ host: '127.0.0.1', port })};\n`);
-  await writeFile(conversationsConfig,
-    `export default ${JSON.stringify({ archivePath: join(directory, 'archive.sqlite'), language: 'it' })};\n`);
-  runtime = await startConversationServer({ AMBROGIO_HTTP_CONFIG_PATH: httpConfig,
-    AMBROGIO_CONVERSATIONS_CONFIG_PATH: conversationsConfig }, directory,
-  async () => ({ orchestrator: { async *produce(history) {
+  runtime = await startTestServer({ directory, language: 'it', reply: { async *produce(history) {
     const last = history.turns.at(-1)?.text;
     if (last === 'errore') { yield text('parziale'); throw new Error('guasto controllato'); }
     if (last === 'lento') { yield text('Inizio '); await slowReply; yield text('fine'); yield expectation(false); return; }
@@ -53,9 +35,9 @@ try {
     await new Promise(resolve => setTimeout(resolve, 15));
     yield text('dal server.');
     yield expectation(false);
-  } }, async close() {} }));
+  } } });
 
-  const origin = `http://127.0.0.1:${port}`;
+  const { origin } = runtime;
   const command = `stty cols 100 rows 30; exec ${process.execPath} ${cli}/dist/src/cli.js --server ${origin}`;
   child = spawn('script', ['-qef', '-E', 'never', '-c', command, '/dev/null'],
     { cwd: cli, env: { ...process.env, SHELL: '/bin/sh', TERM: 'xterm-256color', AMBROGIO_URL: '', AMBROGIO_LANGUAGE: 'it' } });
@@ -145,7 +127,7 @@ try {
   await closing;
   await other.close();
   await client.close();
-  process.stdout.write('Full pinned ambrogio.v1 server with controlled producer + separate terminal client: new, list, reopen, continue, progressive answer, persisted error, rejections, pending refresh, shutdown interruption OK\n');
+  process.stdout.write('Side-by-side ambrogio.v1 test server with controlled producer + separate terminal client: new, list, reopen, continue, progressive answer, persisted error, rejections, pending refresh, shutdown interruption OK\n');
 } finally {
   releaseSlow();
   if (child?.exitCode === null) child.kill();

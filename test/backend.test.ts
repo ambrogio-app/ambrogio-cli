@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { after, before, test } from 'node:test';
 import { once } from 'node:events';
-import { AmbrogioBackend, backendUrl, sessionUrl } from '../src/backend.js';
+import { AmbrogioBackend, backendUrl, sessionUrl, textRejection } from '../src/backend.js';
 import { texts } from '../src/i18n.js';
 import { startFakeBackend } from './fake-backend.js';
 
@@ -98,6 +98,16 @@ test('rifiuto, errore dopo l’ammissione e interruzione concludono il turno con
     assert.equal(fake.hellos.length, 2, 'a closed session is reopened for the next turn');
     assert.deepEqual(fake.starts().map(start => start.conversationId), ['c1', 'c1', 'c1', 'c1', 'c1']);
   } finally { await backend.close(); await fake.close(); }
+});
+
+test('il controllo locale del testo usa le voci del catalogo e ammette fino a 64 KiB in UTF-8', () => {
+  for (const language of ['it', 'en'] as const) {
+    assert.equal(textRejection('', texts[language]), texts[language].emptyMessage);
+    assert.equal(textRejection(' \t\n ', texts[language]), texts[language].emptyMessage);
+    assert.equal(textRejection('€'.repeat(21_846), texts[language]), texts[language].messageTooLarge);
+  }
+  assert.equal(textRejection(`${'€'.repeat(21_845)}a`, texts.it), undefined, '65 536 bytes are allowed');
+  assert.equal(textRejection(' ciao ', texts.en), undefined);
 });
 
 test('controlli locali del testo ed estensioni non supportate', async () => {

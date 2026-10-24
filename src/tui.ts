@@ -1,5 +1,5 @@
 import terminalKit from 'terminal-kit';
-import { AmbrogioBackend, type ClientIdentity, type Conversation, type ConversationItem, type TurnResult } from './backend.js';
+import { AmbrogioBackend, textRejection, type ClientIdentity, type Conversation, type ConversationItem, type TurnResult } from './backend.js';
 import type { Texts } from './i18n.js';
 
 // The document widgets in Terminal Kit 3 are absent from @types/terminal-kit.
@@ -136,7 +136,7 @@ export async function runTerminalChat(url: URL, identity: ClientIdentity, t: Tex
     new kit.TextBox({ parent: doc, x: right, y: term.height - 4, width: rightWidth,
       height: 1, content: t.inputLabel, textAttr: { color: 'gray' } });
     input = new kit.InlineInput({ parent: doc, x: right, y: term.height - 3,
-      width: rightWidth, value, placeholder: t.inputPlaceholder, noEmpty: true,
+      width: rightWidth, value, placeholder: t.inputPlaceholder, noEmpty: false,
       keyBindings: { ...kit.InlineInput.prototype.keyBindings, TAB: undefined, CTRL_R: undefined },
     });
     input.on('submit', (text: string) => { void send(text); });
@@ -208,7 +208,10 @@ export async function runTerminalChat(url: URL, identity: ClientIdentity, t: Tex
   }
 
   async function send(text: string): Promise<void> {
-    if (busy || closed || !text.trim()) return;
+    if (busy || closed) return;
+    // A text that cannot be sent stays in the input field; the status line shows why.
+    const rejection = textRejection(text, t);
+    if (rejection) { status = rejection; renderStatus(); return; }
     const target = currentId;
     busy = true;
     input?.setValue('');

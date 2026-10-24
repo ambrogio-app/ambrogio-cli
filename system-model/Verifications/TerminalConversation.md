@@ -8,21 +8,6 @@ Raggruppa le prove del comportamento del client terminale e della sua integrazio
   * type: verification-objective
 ---
 
-### Analisi della compatibilità con il backend
-
-Esaminare la revisione di backend dichiarata nel contratto sorgente e confrontare i messaggi `ambrogio.v1` inviati e interpretati dal client, gli esiti e i rifiuti, l'elenco e lo storico con i contratti pubblici e lo schema del protocollo a quella revisione; eseguire la prova di integrazione contro la stessa revisione.
-
-#### Details
-L'analisi passa se la revisione è identificata in modo riproducibile e tutti gli usi del protocollo e delle rotte HTTP corrispondono ai contratti e allo schema, e la prova di integrazione contro quella revisione riesce. Fallisce se la revisione è indefinita, se il client usa per i turni un trasporto diverso dal canale `ambrogio.v1` o se dipende da file o moduli interni del backend. Non automatizzabile: stabilire se una modifica dei contratti del backend fra due revisioni cambia gli obblighi del client richiede di leggere i testi dei contratti in un altro repository; la prova di integrazione copre soltanto i percorsi che esercita.
-
-#### Metadata
-  * type: analysis-verification
-
-#### Relations
-  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
-  * verify: [Compatibilità con l'API conversazionale del backend](../Requirements/TerminalConversation.md#compatibilità-con-lapi-conversazionale-del-backend)
----
-
 ### Controllo dei commit delle action fissate
 
 Per ogni action fissata nel profilo di protezione dei workflow GitHub Actions, confrontare il commit con il tag della versione indicata nel repository dell'action su GitHub.
@@ -40,17 +25,16 @@ Il controllo passa se ogni commit fissato corrisponde al tag della versione indi
 
 ### Controllo del repository del client
 
-Esaminare il repository Git del client e la configurazione del workspace Reqvire, quindi verificare che modello, decisioni e codice del client siano versionati qui.
+Esaminare il codice e la configurazione del client terminale e verificare che il client sia scritto in TypeScript per Node.js e che la schermata conversazionale persistente a due pannelli sia realizzata con Terminal Kit.
 
 #### Details
-Il controllo passa se il repository e il modello Reqvire sono autonomi dal backend e le decisioni del client sono tracciate in questo workspace. Non automatizzabile: stabilire che una decisione tecnica riguarda il client e che è registrata in questo modello e non in quello del backend richiede di leggere i due modelli.
+Il controllo passa se il codice di `src/` è TypeScript compilato per Node.js e la schermata usa i componenti di Terminal Kit. Fallisce se il client richiede un'altra piattaforma di esecuzione o se la schermata è realizzata con un'altra libreria. Non automatizzabile: stabilire con quale libreria è realizzata la schermata richiede di leggere il codice; la «Prova della gestione delle dipendenze» controlla soltanto il manifest e il lockfile.
 
 #### Metadata
   * type: inspection-verification
 
 #### Relations
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
-  * verify: [Repository autonomo del client terminale](../Requirements/TerminalConversation.md#repository-autonomo-del-client-terminale)
   * verify: [Stack del client terminale](../Requirements/TerminalConversation.md#stack-del-client-terminale)
 ---
 
@@ -81,10 +65,10 @@ Il controllo passa se il workflow si avvia per il push e per la pull request, il
 
 #### Relations
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
-  * verify: [Scansione dei segreti nella CI](../Requirements/TerminalConversation.md#scansione-dei-segreti-nella-ci)
+  * verify: [Scansione dei segreti nella CI del client terminale](../Requirements/TerminalConversation.md#scansione-dei-segreti-nella-ci-del-client-terminale)
 ---
 
-### Ispezione della protezione del merge
+### Ispezione della protezione del merge del client terminale
 
 Leggere con `gh api repos/<proprietario>/<repository>/rulesets` e con il dettaglio del ruleset `main` le regole attive sul branch principale.
 
@@ -96,63 +80,82 @@ L'ispezione passa se il ruleset corrisponde al contratto: applicazione attiva su
 
 #### Relations
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
-  * verify: [Controlli obbligatori prima del merge](../Requirements/TerminalConversation.md#controlli-obbligatori-prima-del-merge)
+  * verify: [Controlli obbligatori prima del merge del client terminale](../Requirements/TerminalConversation.md#controlli-obbligatori-prima-del-merge-del-client-terminale)
 ---
 
-### Ispezione delle decisioni sostituite
+### Ispezione delle istruzioni per gli agenti del client terminale
 
-Durante la revisione di ogni modifica che registra una decisione in sostituzione di un'altra, cercare nel modello gli elementi che affermano la decisione sostituita, con `change-impact` e con una ricerca testuale dei suoi termini chiave.
+Durante la revisione di ogni modifica di `AGENTS.md` del client terminale o di `ambrogio-model/AGENTS.md`, leggere le istruzioni per gli agenti del client terminale e confrontarle con le regole di processo di `ambrogio-model`.
 
 #### Details
-L'ispezione passa se, dopo la modifica, nessun requisito, contratto o verifica afferma ancora la decisione sostituita. Fallisce se un elemento la afferma ancora. Non automatizzabile: riconoscere che un testo afferma una decisione sostituita richiede di leggerlo; lo script copre soltanto date e formule di storia.
+L'ispezione passa se le istruzioni rimandano a `ambrogio-model/AGENTS.md` per le regole comuni, non le contraddicono e aggiungono soltanto indicazioni proprie del client terminale. Fallisce se le istruzioni contraddicono una regola comune, descrivono un modello autonomo del client o una revisione fissata del backend, oppure indicano una versione di Reqvire diversa da quella di `ambrogio-model/.reqvire-version`. Non automatizzabile: confrontare istruzioni in prosa con i requisiti richiede di leggerle.
 
 #### Metadata
   * type: inspection-verification
 
 #### Relations
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
-  * verify: [Decisioni sostituite rimosse nella stessa modifica](../Requirements/TerminalConversation.md#decisioni-sostituite-rimosse-nella-stessa-modifica)
----
-
-### Ispezione delle dipendenze fra contratti
-
-Durante la revisione di ogni modifica che aggiunge o modifica un contratto, leggere il contratto e i contratti dei requisiti da cui dipende, ed eseguire `change-impact` sulla modifica.
-
-#### Details
-L'ispezione passa se il contratto afferma soltanto la decisione del proprio requisito e ogni dipendenza da un contratto posseduto da un altro requisito è dichiarata come Contract Reference dal requisito proprietario del contratto dipendente, così che `change-impact` la segnali. Fallisce se un contratto ripete contenuto posseduto da un altro requisito o se una dipendenza non è dichiarata. Non automatizzabile: stabilire se due testi affermano lo stesso fatto richiede di leggerli.
-
-#### Metadata
-  * type: inspection-verification
-
-#### Relations
-  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
-  * verify: [Dipendenze fra contratti dichiarate come riferimenti](../Requirements/TerminalConversation.md#dipendenze-fra-contratti-dichiarate-come-riferimenti)
+  * verify: [Istruzioni per gli agenti del client terminale](../Requirements/TerminalConversation.md#istruzioni-per-gli-agenti-del-client-terminale)
 ---
 
 ### Prova del client conversazionale nel terminale
 
-Avviare il backend e il client terminale come processi distinti, rendendo disponibili al client soltanto il canale conversazionale `ambrogio.v1` e le API HTTP pubbliche del backend. Dal terminale inviare un nuovo turno e osservare una risposta prodotta in più frammenti; consultare le conversazioni conservate e proseguire quella creata, recuperandone lo storico dal backend. Ripetere con un turno rifiutato, per esempio la continuazione di una conversazione occupata, con un errore dopo l'ammissione a risposta già iniziata e con la chiusura della sessione prima dell'esito.
+Avviare il backend affiancato nella cartella di lavoro tramite il suo ingresso di prova pubblico, «Ingresso di prova del server conversazionale», e il client terminale come processi distinti, rendendo disponibili al client soltanto il canale conversazionale `ambrogio.v1` e le API HTTP pubbliche del backend. Dal terminale inviare un nuovo turno e osservare una risposta prodotta in più frammenti; consultare le conversazioni conservate e proseguire quella creata, recuperandone lo storico dal backend. Ripetere con un turno rifiutato, per esempio la continuazione di una conversazione occupata, con un errore dopo l'ammissione a risposta già iniziata e con la chiusura della sessione prima dell'esito.
 
 #### Details
-La prova passa se la persona può conversare dal terminale, osserva i frammenti durante la generazione e può consultare e continuare una conversazione conservata tramite le interfacce pubbliche. Il turno risulta riuscito soltanto con `turn.completed`; `turn.rejected` e `turn.failed` mostrano il loro messaggio pubblico al posto dei frammenti; la chiusura della sessione o `turn.interrupted` mostrano «Risposta interrotta». Fallisce se il client richiede un'interfaccia grafica, accede direttamente all'archivio o ai componenti server, usa per i turni un trasporto diverso dal canale `ambrogio.v1`, oppure presenta come riuscito un turno privo di `turn.completed`.
+La prova passa se la persona può conversare dal terminale, osserva i frammenti durante la generazione e può consultare e continuare una conversazione conservata tramite le interfacce pubbliche. Il turno risulta riuscito soltanto con `turn.completed`; `turn.rejected` e `turn.failed` mostrano il loro messaggio pubblico al posto dei frammenti; la chiusura della sessione o `turn.interrupted` mostrano «Risposta interrotta». Fallisce se il client richiede un'interfaccia grafica, accede direttamente all'archivio o ai componenti server, usa per i turni un trasporto diverso dal canale `ambrogio.v1`, oppure presenta come riuscito un turno privo di `turn.completed`. La prova usa il backend affiancato così com'è, senza fissarne una revisione, e importa dal backend soltanto l'ingresso di prova.
 
 #### Metadata
   * type: test-verification
 
 #### Relations
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
-  * satisfiedBy: [verify-pinned-backend.mjs](../../scripts/verify-pinned-backend.mjs)
+  * satisfiedBy: [verify-backend.mjs](../../scripts/verify-backend.mjs)
   * satisfiedBy: [backend.test.ts](../../test/backend.test.ts)
   * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
   * verify: [Client conversazionale nel terminale](../Requirements/TerminalConversation.md#client-conversazionale-nel-terminale)
-  * verify: [Invio del turno sul canale conversazionale](../Requirements/TerminalConversation.md#invio-del-turno-sul-canale-conversazionale)
-  * verify: [Presentazione del rifiuto del turno](../Requirements/TerminalConversation.md#presentazione-del-rifiuto-del-turno)
-  * verify: [Presentazione dell'errore dopo l'ammissione](../Requirements/TerminalConversation.md#presentazione-dellerrore-dopo-lammissione)
-  * verify: [Riconoscimento del completamento della risposta testuale](../Requirements/TerminalConversation.md#riconoscimento-del-completamento-della-risposta-testuale)
+  * verify: [Invio del turno dal client terminale](../Requirements/TerminalConversation.md#invio-del-turno-dal-client-terminale)
+  * verify: [Presentazione del rifiuto del turno nel client terminale](../Requirements/TerminalConversation.md#presentazione-del-rifiuto-del-turno-nel-client-terminale)
+  * verify: [Presentazione dell'errore dopo l'ammissione nel client terminale](../Requirements/TerminalConversation.md#presentazione-dellerrore-dopo-lammissione-nel-client-terminale)
+  * verify: [Riconoscimento del completamento della risposta nel client terminale](../Requirements/TerminalConversation.md#riconoscimento-del-completamento-della-risposta-nel-client-terminale)
   * verify: [Segnalazione locale dell'interruzione della chat testuale](../Requirements/TerminalConversation.md#segnalazione-locale-dellinterruzione-della-chat-testuale)
+  * verify: [Uso delle sole interfacce pubbliche del backend nel client terminale](../Requirements/TerminalConversation.md#uso-delle-sole-interfacce-pubbliche-del-backend-nel-client-terminale)
 ---
 
-### Prova dell'hook pre-commit dei segreti
+### Prova del rifiuto locale del turno testuale nel client terminale
+
+Contro un backend controllato, inviare dal client terminale un testo composto di soli spazi e un testo di oltre 64 KiB in UTF-8, poi un testo ammesso; osservare gli errori mostrati e le sessioni aperte sul backend.
+
+#### Details
+La prova passa se i due testi non ammessi sono rifiutati con le voci «Testo vuoto» e «Testo oltre 64 KiB» del catalogo dei testi, senza che il backend riceva `session.hello` né alcun messaggio del turno, e il testo ammesso apre la sessione e conclude il turno. Fallisce se un testo non ammesso apre la sessione o è trasmesso al backend, oppure se il rifiuto non mostra il messaggio del catalogo. I test del modulo di comunicazione con il backend verificano entrambi i limiti nelle due lingue, compreso un testo di esattamente 64 KiB, che è ammesso; i test in terminale simulato verificano che la schermata, che applica lo stesso controllo, mostri nella riga di stato la voce «Testo vuoto» per un testo vuoto e per uno di soli spazi senza aprire la sessione né cambiare il nome della nuova chat. Scrivere oltre 64 KiB tasto per tasto nel terminale simulato richiede troppo tempo per la suite di test.
+
+#### Metadata
+  * type: test-verification
+
+#### Relations
+  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
+  * satisfiedBy: [backend.test.ts](../../test/backend.test.ts)
+  * satisfiedBy: [tui.test.ts](../../test/tui.test.ts)
+  * verify: [Rifiuto locale del turno testuale nel client terminale](../Requirements/TerminalConversation.md#rifiuto-locale-del-turno-testuale-nel-client-terminale)
+---
+
+### Prova dell'assenza di import del backend nel client terminale
+
+Leggere come testo ogni file del codice di produzione in `src/` e raccogliere gli specificatori dei suoi `import`, `export … from` e `import()` dinamici.
+
+#### Details
+La prova passa se nessuno specificatore indica un percorso del repository `ambrogio-backend`, un percorso relativo che esce dalla radice del client o un pacchetto del backend. Fallisce se il codice di produzione importa codice del backend, anche compilato.
+
+#### Metadata
+  * type: test-verification
+
+#### Relations
+  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
+  * satisfiedBy: [imports.test.ts](../../test/imports.test.ts)
+  * verify: [Uso delle sole interfacce pubbliche del backend nel client terminale](../Requirements/TerminalConversation.md#uso-delle-sole-interfacce-pubbliche-del-backend-nel-client-terminale)
+---
+
+### Prova dell'hook pre-commit dei segreti del client terminale
 
 In un repository Git temporaneo con `core.hooksPath` rivolto alla cartella `.githooks` del client, mettere in staging un file con un token fittizio riconosciuto da gitleaks, generato durante la prova, e tentare il commit; ripetere con un file privo di segreti e con un `PATH` che non contiene `gitleaks`.
 
@@ -165,7 +168,7 @@ La prova passa se il commit con il token fittizio viene rifiutato senza che l'ou
 #### Relations
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
   * satisfiedBy: [secrets.test.ts](../../test/secrets.test.ts)
-  * verify: [Controllo dei segreti prima del commit](../Requirements/TerminalConversation.md#controllo-dei-segreti-prima-del-commit)
+  * verify: [Controllo dei segreti prima del commit del client terminale](../Requirements/TerminalConversation.md#controllo-dei-segreti-prima-del-commit-del-client-terminale)
 ---
 
 ### Prova dell'identità del client nella sessione
@@ -182,26 +185,6 @@ La prova passa se senza configurazione il `clientId` è `cli-<nome host>` e il `
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
   * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
   * verify: [Identificazione del client terminale nella sessione](../Requirements/TerminalConversation.md#identificazione-del-client-terminale-nella-sessione)
----
-
-### Prova dell'integrità del modello
-
-Eseguire `node scripts/check-model.mjs` nella radice del repository, come fa la CI dopo la validazione e il lint del modello.
-
-#### Details
-La prova passa se lo script non segnala storia delle decisioni, formule non normative, verifiche manuali senza «Non automatizzabile:» né file di governo non riferiti dal modello, e termina con stato 0. Fallisce se lo script segnala una violazione o non riesce a eseguire.
-
-#### Metadata
-  * type: test-verification
-
-#### Relations
-  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
-  * satisfiedBy: [check-model.mjs](../../scripts/check-model.mjs)
-  * verify: [Controllo automatico dell'integrità del modello](../Requirements/TerminalConversation.md#controllo-automatico-dellintegrità-del-modello)
-  * verify: [Decisioni sostituite rimosse nella stessa modifica](../Requirements/TerminalConversation.md#decisioni-sostituite-rimosse-nella-stessa-modifica)
-  * verify: [File di governo collegati al modello](../Requirements/TerminalConversation.md#file-di-governo-collegati-al-modello)
-  * verify: [Formulazione normativa degli obblighi](../Requirements/TerminalConversation.md#formulazione-normativa-degli-obblighi)
-  * verify: [Verifiche manuali giustificate](../Requirements/TerminalConversation.md#verifiche-manuali-giustificate)
 ---
 
 ### Prova dell'invito ad aggiornare la conversazione
@@ -222,10 +205,10 @@ La prova passa se la conversazione riaperta mostra il turno «In elaborazione» 
 
 ### Prova della configurazione del percorso CI
 
-Leggere `.github/workflows/ci.yml` come testo e confrontarlo con i trigger e le fasi richiesti alla CI del client e con l'installazione di gitleaks di `.github/workflows/secret-scan.yml`.
+Leggere `.github/workflows/ci.yml` come testo e confrontarlo con i trigger e le fasi richiesti alla CI del client, con i contratti comuni del checkout affiancato e dei controlli del modello e con l'installazione di gitleaks di `.github/workflows/secret-scan.yml`.
 
 #### Details
-La prova passa se il workflow dichiara i trigger `push` sul branch `main`, `pull_request`, `workflow_dispatch` e `workflow_call`; il job `checks` usa Node.js 24, installa pnpm 12.11.2 e le dipendenze con `pnpm install --frozen-lockfile`; esegue Reqvire 1.3.2 `validate` e `lint --json` con `set -euo pipefail` e la condizione `jq -e '.auto_fixable == [] and .needs_manual_review == []'`, poi `node scripts/check-model.mjs`, `pnpm typecheck`, `pnpm test` e `pnpm build`, in quest'ordine; e prima di `pnpm test` installa gitleaks con la stessa versione, la stessa impronta e lo stesso script di `secret-scan.yml`. Fallisce se manca un trigger o una fase, se le fasi sono in un altro ordine, se una fase dichiara `continue-on-error` o ignora l'esito di un comando con `|| true`, oppure se versione, impronta o script di installazione di gitleaks differiscono da quelli di `secret-scan.yml`.
+La prova passa se il workflow dichiara i trigger `push` sul branch `main`, `pull_request`, `workflow_dispatch` e `workflow_call` e la variabile `BRANCH` pari a `github.head_ref` o, in sua assenza, `github.ref_name`; il job `checks` esegue il checkout del client in `workspace/ambrogio-cli` con `fetch-depth: 0`, clona `ambrogio-model` in `workspace/ambrogio-model` sul branch `BRANCH` se esiste sul remoto e altrimenti su `main`, esegue `workspace/ambrogio-model/scripts/checkout-workspace workspace "$BRANCH"` e `workspace/ambrogio-model/scripts/model-checks --workspace workspace`; nella cartella `workspace/ambrogio-backend` installa le dipendenze del backend con `pnpm install --frozen-lockfile` e lo compila con `pnpm build`, con la versione di pnpm letta da `packageManager` nel `package.json` del backend; usa Node.js 24, installa pnpm 12.11.2 e le dipendenze con `pnpm install --frozen-lockfile` nella cartella `workspace/ambrogio-cli`, dove esegue `pnpm typecheck`, `pnpm test`, la prova di integrazione `pnpm test:backend` contro il backend affiancato compilato e `pnpm build`, in quest'ordine; prima di `pnpm test` installa gitleaks con la stessa versione, la stessa impronta e lo stesso script di `secret-scan.yml`; nessun passo indica un numero di versione di Reqvire. Fallisce se manca un trigger o una fase, se le fasi sono in un altro ordine, se una fase dichiara `continue-on-error` o ignora l'esito di un comando con `|| true`, se un passo fissa una versione di Reqvire, oppure se versione, impronta o script di installazione di gitleaks differiscono da quelli di `secret-scan.yml`.
 
 #### Metadata
   * type: test-verification
@@ -236,7 +219,7 @@ La prova passa se il workflow dichiara i trigger `push` sul branch `main`, `pull
   * verify: [Controlli CI del client terminale](../Requirements/TerminalConversation.md#controlli-ci-del-client-terminale)
 ---
 
-### Prova della configurazione della scansione dei segreti in CI
+### Prova della configurazione della scansione dei segreti in CI del client terminale
 
 Leggere `.github/workflows/secret-scan.yml` come testo e confrontarlo con il profilo di scansione dei segreti; eseguire il comando di scansione del workflow con gitleaks su un repository Git temporaneo che contiene in un commit un token fittizio generato durante la prova, e su uno che non contiene segreti.
 
@@ -250,7 +233,7 @@ La prova passa se il workflow dichiara i trigger `push` su qualunque branch, `pu
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
   * satisfiedBy: [secrets.test.ts](../../test/secrets.test.ts)
   * satisfiedBy: [workflows.test.ts](../../test/workflows.test.ts)
-  * verify: [Scansione dei segreti nella CI](../Requirements/TerminalConversation.md#scansione-dei-segreti-nella-ci)
+  * verify: [Scansione dei segreti nella CI del client terminale](../Requirements/TerminalConversation.md#scansione-dei-segreti-nella-ci-del-client-terminale)
 ---
 
 ### Prova della gestione delle dipendenze
@@ -318,7 +301,7 @@ La prova passa se il client scarta il riferimento alla vecchia pagina successiva
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
   * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
   * satisfiedBy: [tui.test.ts](../../test/tui.test.ts)
-  * verify: [Ripartenza dell'elenco conversazioni dopo un aggiornamento](../Requirements/TerminalConversation.md#ripartenza-dellelenco-conversazioni-dopo-un-aggiornamento)
+  * verify: [Ripartenza dell'elenco conversazioni del client terminale](../Requirements/TerminalConversation.md#ripartenza-dellelenco-conversazioni-del-client-terminale)
 ---
 
 ### Prova della schermata conversazionale persistente
@@ -326,19 +309,19 @@ La prova passa se il client scarta il riferimento alla vecchia pagina successiva
 Avviare il client in un terminale interattivo simulato con un backend HTTP controllato che offre più conversazioni e storici. Verificare che all'avvio sia selezionata «Nuova chat» come prima voce senza chiamata HTTP di creazione e che, dopo il primo invio, la voce mostri l'anteprima del messaggio. Verificare nella stessa schermata la barra laterale e la chat corrente, navigare con `Tab`, frecce e `Invio`, inviare due turni nella stessa chat e ricevere una risposta progressiva. Aggiornare l'elenco e ridimensionare il terminale, anche sotto e poi di nuovo sopra la dimensione minima di 70 colonne e 14 righe. Rendere non disponibile lo storico di una conversazione dell'elenco al momento dell'anteprima.
 
 #### Details
-La prova passa se la chat e il campo di scrittura restano visibili durante composizione, invio e ricezione, il secondo turno continua la stessa conversazione e l'elenco mostra le anteprime dei primi messaggi ottenute dagli storici pubblici. La nuova chat iniziale resta aperta dopo il primo invio e prende il nome da quel testo; Tab, frecce e Invio aprono la chat scelta. L'aggiornamento riparte dalla prima pagina. Il ridimensionamento ricalcola la larghezza della barra laterale e la posizione del campo di scrittura secondo le nuove dimensioni; con meno di 70 colonne o meno di 14 righe la schermata mostra al posto dei pannelli, per intero e andando a capo quando una riga non basta, l'avviso della voce «Terminale troppo piccolo» del catalogo dei testi, e tornando a una dimensione sufficiente mostra di nuovo la chat corrente, che il turno successivo continua. Se lo storico di una conversazione non è disponibile, la sua voce mostra un identificativo abbreviato e resta selezionabile con Tab, frecce e Invio. Fallisce se la chat o il campo di scrittura scompaiono durante un turno, se il ridimensionamento lascia i pannelli con le dimensioni precedenti, se la schermata mostra due pannelli sotto la dimensione minima o non mostra l'avviso per intero, se dopo il ridimensionamento la chat corrente è perduta o il turno successivo apre un'altra conversazione, oppure se una conversazione con storico non disponibile scompare dall'elenco, mostra l'identificativo completo o non è selezionabile. I test in terminale simulato verificano a 100×30 la schermata, le anteprime, due turni, la navigazione, la pagina successiva e l'aggiornamento, e a più dimensioni il ridimensionamento, la vista sotto la dimensione minima e l'identificativo abbreviato. La prova con server completo verifica nuova chat, riapertura e continuazione.
+La prova passa se la chat e il campo di scrittura restano visibili durante composizione, invio e ricezione, il secondo turno continua la stessa conversazione e l'elenco mostra le anteprime dei primi messaggi ottenute dagli storici pubblici. La nuova chat iniziale resta aperta dopo il primo invio e prende il nome da quel testo; Tab, frecce e Invio aprono la chat scelta. L'aggiornamento riparte dalla prima pagina. Il ridimensionamento ricalcola la larghezza della barra laterale e la posizione del campo di scrittura secondo le nuove dimensioni; con meno di 70 colonne o meno di 14 righe la schermata mostra al posto dei pannelli, per intero e andando a capo quando una riga non basta, l'avviso della voce «Terminale troppo piccolo» del catalogo dei testi, e tornando a una dimensione sufficiente mostra di nuovo la chat corrente, che il turno successivo continua. Se lo storico di una conversazione non è disponibile, la sua voce mostra come identificativo abbreviato i primi 8 caratteri dell'identificativo e resta selezionabile con Tab, frecce e Invio. Fallisce se la chat o il campo di scrittura scompaiono durante un turno, se il ridimensionamento lascia i pannelli con le dimensioni precedenti, se la schermata mostra due pannelli sotto la dimensione minima o non mostra l'avviso per intero, se dopo il ridimensionamento la chat corrente è perduta o il turno successivo apre un'altra conversazione, oppure se una conversazione con storico non disponibile scompare dall'elenco, mostra l'identificativo completo o non è selezionabile. I test in terminale simulato verificano a 100×30 la schermata, le anteprime, due turni, la navigazione, la pagina successiva e l'aggiornamento, e a più dimensioni il ridimensionamento, la vista sotto la dimensione minima e l'identificativo abbreviato. La prova con il backend affiancato, avviato tramite il suo ingresso di prova pubblico, verifica nuova chat, riapertura e continuazione.
 
 #### Metadata
   * type: test-verification
 
 #### Relations
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
-  * satisfiedBy: [verify-pinned-backend.mjs](../../scripts/verify-pinned-backend.mjs)
+  * satisfiedBy: [verify-backend.mjs](../../scripts/verify-backend.mjs)
   * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
   * satisfiedBy: [tui.test.ts](../../test/tui.test.ts)
-  * verify: [Anteprima delle conversazioni nella barra laterale](../Requirements/TerminalConversation.md#anteprima-delle-conversazioni-nella-barra-laterale)
+  * verify: [Anteprima delle conversazioni nella barra laterale del client terminale](../Requirements/TerminalConversation.md#anteprima-delle-conversazioni-nella-barra-laterale-del-client-terminale)
   * verify: [Navigazione della chat nella schermata persistente](../Requirements/TerminalConversation.md#navigazione-della-chat-nella-schermata-persistente)
-  * verify: [Nuova chat iniziale nella barra laterale](../Requirements/TerminalConversation.md#nuova-chat-iniziale-nella-barra-laterale)
+  * verify: [Nuova chat iniziale del client terminale](../Requirements/TerminalConversation.md#nuova-chat-iniziale-del-client-terminale)
   * verify: [Vista persistente della conversazione](../Requirements/TerminalConversation.md#vista-persistente-della-conversazione)
 ---
 
@@ -355,5 +338,5 @@ La prova passa se, durante l'elaborazione, il client mostra il testo del turno c
 #### Relations
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
   * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
-  * verify: [Stato del turno in elaborazione alla riapertura](../Requirements/TerminalConversation.md#stato-del-turno-in-elaborazione-alla-riapertura)
+  * verify: [Stato del turno in elaborazione alla riapertura nel client terminale](../Requirements/TerminalConversation.md#stato-del-turno-in-elaborazione-alla-riapertura-nel-client-terminale)
 ---

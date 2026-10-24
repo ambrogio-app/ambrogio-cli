@@ -5,7 +5,7 @@ import { startFakeBackend } from './fake-backend.js';
 import { keys, startTerminal, type Screen } from './terminal.js';
 
 // Verifications: Prova della schermata conversazionale persistente;
-// Prova della ripartenza dell'elenco aggiornato.
+// Prova della ripartenza dell'elenco aggiornato; Prova del rifiuto locale del turno testuale nel client terminale.
 const executable = new URL('../src/cli.js', import.meta.url).pathname;
 const environment = { ...process.env, AMBROGIO_LANGUAGE: 'it' };
 const at = '2026-10-16T10:00:00.000Z';
@@ -86,6 +86,49 @@ test('il ridimensionamento ricalcola i pannelli e sotto 70×14 chiede di allarga
     terminal.write('ancora\r');
     await terminal.waitFor(screen => screen.text().includes('Tu: ancora') && turns.length === 2, 'secondo turno');
     assert.deepEqual(turns, [{ text: 'ciao' }, { text: 'ancora', conversationId: 'c1' }]);
+    assert.equal(fake.hellos.length, 1);
+    assert.equal(await terminal.quit(), 0);
+  } finally {
+    terminal.dispose();
+    await fake.close();
+  }
+});
+
+test('un testo vuoto o di soli spazi è rifiutato con il messaggio del catalogo senza aprire la sessione', async () => {
+  const turns: string[] = [];
+  const fake = await startFakeBackend({
+    onTurn(turn) {
+      turns.push(turn.text);
+      turn.accept('c1', 't1');
+      turn.transmit(['Risposta']);
+      turn.send({ type: 'turn.completed', turnId: 't1', expectsReply: false });
+    },
+    http(request, response) {
+      if (request.url === '/api/conversations') json(response, { items: [], nextCursor: null });
+      else if (request.url === '/api/conversations/c1') json(response, conversation('c1', turns));
+      else json(response, { error: 'Non trovata.' }, 404);
+    },
+  });
+  const terminal = await startTerminal(executable, ['--server', fake.url], { cols: 100, rows: 30, env: environment });
+  const newChat = '\u000e';
+  try {
+    await terminal.waitFor(screen => twoPanels(screen) && screen.text().includes('Conversazioni aggiornate.'), 'schermata');
+    // The screen rejects with the same check as the backend client, whose tests cover the 64 KiB limit:
+    // typing more than 64 KiB key by key into the simulated terminal takes too long for the suite.
+    for (const [text, message] of [['', 'Scrivi un messaggio non vuoto.'], ['   ', 'Scrivi un messaggio non vuoto.']] as const) {
+      terminal.write(newChat);
+      await terminal.waitFor(screen => screen.text().includes('Nuova chat pronta.'), 'nuova chat');
+      terminal.write(`${text}\r`);
+      await terminal.waitFor(screen => screen.text().includes(message), `rifiuto di ${text.length} caratteri`);
+      assert.doesNotMatch(terminal.screen.text(), /Tu:|Invio non riuscito|Ambrogio sta rispondendo/);
+      assert.equal(sidebar(terminal.screen)[0], 'Nuova chat');
+      assert.equal(fake.hellos.length, 0, 'no session is opened for a rejected text');
+    }
+    terminal.write(newChat);
+    await terminal.waitFor(screen => screen.text().includes('Nuova chat pronta.'), 'nuova chat');
+    terminal.write('ciao\r');
+    await terminal.waitFor(screen => screen.text().includes('Risposta conservata.'), 'turno ammesso');
+    assert.deepEqual(turns, ['ciao']);
     assert.equal(fake.hellos.length, 1);
     assert.equal(await terminal.quit(), 0);
   } finally {
