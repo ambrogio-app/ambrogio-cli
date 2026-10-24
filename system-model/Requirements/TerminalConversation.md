@@ -42,7 +42,7 @@ Ambrogio deve fornire alla famiglia un client di chat testuale utilizzabile dal 
 Quando la CI del client terminale si esegue, il job `Terminal client checks` deve eseguire i controlli dell'intero modello sulla cartella di lavoro con i repository affiancati, il controllo TypeScript senza emissione, la suite di test del client, la prova di integrazione con il backend affiancato e la compilazione, e deve fallire se uno di questi controlli fallisce.
 
 #### Details
-I trigger sono `push` sul branch `main`, `pull_request`, `workflow_dispatch` e `workflow_call`. Il job esegue il checkout del client in `workspace/ambrogio-cli` con la storia completa, clona `ambrogio-model` in `workspace/ambrogio-model` sul branch con lo stesso nome della modifica se esiste e altrimenti su `main`, poi esegue `checkout-workspace` e `model-checks` di `ambrogio-model` sulla cartella `workspace`, secondo i contratti comuni. Nella cartella del client seguono, su Node.js 24, la versione minima del client, e dopo l'installazione congelata delle dipendenze con pnpm: `pnpm typecheck`; `pnpm test`, che usa il backend simulato locale; la prova di integrazione `pnpm test:backend` contro il backend affiancato; `pnpm build`. Prima di installare le dipendenze del client, nella cartella `workspace/ambrogio-backend` il job installa le dipendenze del backend con `pnpm install --frozen-lockfile` e lo compila con `pnpm build`, usando la versione di pnpm dichiarata in `packageManager` dal `package.json` del backend, e riporta nel log il commit del backend usato. Prima di `pnpm test` il job installa gitleaks come indicato dal profilo di scansione dei segreti del client terminale, perché la suite di test prova l'hook pre-commit e il comando di scansione.
+I trigger sono `push` sul branch `main`, `pull_request`, `workflow_dispatch` e `workflow_call`. Il job esegue il checkout del client in `workspace/ambrogio-cli` con la storia completa, clona `ambrogio-model` in `workspace/ambrogio-model` sul branch con lo stesso nome della modifica se esiste e altrimenti su `main`, poi esegue `checkout-workspace` e `model-checks` di `ambrogio-model` sulla cartella `workspace`, secondo i contratti comuni. Il job usa Node.js 24, la versione minima del client, e attiva pnpm con `corepack enable` secondo il profilo comune di installazione con pnpm e Corepack, con `COREPACK_ENABLE_DOWNLOAD_PROMPT` uguale a `0` a livello di job. Subito dopo, nella cartella `workspace/ambrogio-backend` il job riporta nel log il commit del backend usato, installa le dipendenze del backend con `pnpm install --frozen-lockfile` e lo compila con `pnpm build`: eseguito in quella cartella, Corepack usa la versione di pnpm dichiarata in `packageManager` dal `package.json` del backend. Nella cartella del client seguono l'installazione congelata delle dipendenze con `pnpm install --frozen-lockfile`, l'audit `pnpm audit --audit-level high` secondo l'audit comune delle dipendenze con pnpm, poi `pnpm typecheck`; `pnpm test`, che usa il backend simulato locale; la prova di integrazione `pnpm test:backend` contro il backend affiancato; `pnpm build`. Prima di `pnpm test` il job installa gitleaks come indicato dal profilo di scansione dei segreti del client terminale, perché la suite di test prova l'hook pre-commit e il comando di scansione.
 
 #### Metadata
   * type: requirement
@@ -51,6 +51,8 @@ I trigger sono `push` sul branch `main`, `pull_request`, `workflow_dispatch` e `
   * [Profilo di scansione dei segreti del client terminale](../Contracts/TerminalConversation.md#profilo-di-scansione-dei-segreti-del-client-terminale)
   * [Checkout affiancato dello spazio di lavoro](../../../ambrogio-model/system-model/Contracts/ModelDrivenDevelopment.md#checkout-affiancato-dello-spazio-di-lavoro)
   * [Controlli del modello dello spazio di lavoro](../../../ambrogio-model/system-model/Contracts/ModelDrivenDevelopment.md#controlli-del-modello-dello-spazio-di-lavoro)
+  * [Profilo di installazione con pnpm e Corepack](../../../ambrogio-model/system-model/Contracts/ModelDrivenDevelopment.md#profilo-di-installazione-con-pnpm-e-corepack)
+  * [Audit delle dipendenze con pnpm](../../../ambrogio-model/system-model/Contracts/ModelDrivenDevelopment.md#audit-delle-dipendenze-con-pnpm)
 
 #### Relations
   * derivedFrom: [Controlli CI dei repository di Ambrogio](../../../ambrogio-model/system-model/Requirements/ModelDrivenDevelopment.md#controlli-ci-dei-repository-di-ambrogio)
@@ -106,7 +108,7 @@ Quando il client apre la sessione conversazionale, deve presentarsi al backend c
 
 ### Installazione delle dipendenze con pnpm
 
-Quando si installano le dipendenze del client terminale, l'installazione deve usare pnpm alla versione dichiarata nel repository e il lockfile versionato senza modificarlo, deve ammettere gli script di build soltanto alle dipendenze elencate nella configurazione di pnpm e deve applicare l'attesa minima di pnpm per le versioni appena pubblicate.
+Quando si installano le dipendenze del client terminale, l'installazione deve usare pnpm alla versione dichiarata nel repository, attivato con Corepack nella CI, e il lockfile versionato senza modificarlo, deve ammettere gli script di build soltanto alle dipendenze elencate nella configurazione di pnpm e deve applicare l'attesa minima di pnpm per le versioni appena pubblicate.
 
 #### Details
 Lo stesso gestore di pacchetti e le stesse regole di installazione usate da backend e satellite rendono riproducibili le installazioni locali e in CI e limitano l'esecuzione di codice delle dipendenze durante l'installazione.
@@ -114,12 +116,15 @@ Lo stesso gestore di pacchetti e le stesse regole di installazione usate da back
 #### Metadata
   * type: requirement
 
+#### Contract References
+  * [Profilo di installazione con pnpm e Corepack](../../../ambrogio-model/system-model/Contracts/ModelDrivenDevelopment.md#profilo-di-installazione-con-pnpm-e-corepack)
+
 #### Relations
+  * derivedFrom: [Installazione delle dipendenze con pnpm attivato da Corepack](../../../ambrogio-model/system-model/Requirements/ModelDrivenDevelopment.md#installazione-delle-dipendenze-con-pnpm-attivato-da-corepack)
   * satisfiedBy: [ci.yml](../../.github/workflows/ci.yml)
   * satisfiedBy: [package.json](../../package.json)
   * satisfiedBy: [pnpm-lock.yaml](../../pnpm-lock.yaml)
   * satisfiedBy: [pnpm-workspace.yaml](../../pnpm-workspace.yaml)
-  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
 ### Invio del turno dal client terminale
@@ -369,7 +374,7 @@ Il client terminale deve essere implementato in TypeScript per Node.js e offrire
   * type: requirement
 
 #### Contract References
-  * [Installazione con pnpm 12.11.2](../Contracts/TerminalConversation.md#installazione-con-pnpm-12112)
+  * [Installazione delle dipendenze del client terminale con pnpm](../Contracts/TerminalConversation.md#installazione-delle-dipendenze-del-client-terminale-con-pnpm)
   * [Schermata conversazionale a due pannelli](../Contracts/TerminalConversation.md#schermata-conversazionale-a-due-pannelli)
 
 #### Relations
@@ -465,4 +470,57 @@ Quando il client è attivo in un terminale interattivo, deve mostrare l'elenco d
 #### Relations
   * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
+### Controlli del modello prima del commit del client terminale
+
+Quando si crea un commit in un clone del client terminale con gli hook versionati attivi, l'hook `.githooks/pre-commit` deve eseguire, dopo la scansione dei segreti, i controlli dell'intero modello con `scripts/model-checks` del checkout di `ambrogio-model` affiancato al repository, e deve impedire il commit se quei controlli falliscono o se `ambrogio-model` non è affiancato.
+
+#### Metadata
+  * type: requirement
+
+#### Contract References
+  * [Controlli del modello nell'hook pre-commit](../../../ambrogio-model/system-model/Contracts/ModelDrivenDevelopment.md#controlli-del-modello-nellhook-pre-commit)
+  * [Controlli del modello dello spazio di lavoro](../../../ambrogio-model/system-model/Contracts/ModelDrivenDevelopment.md#controlli-del-modello-dello-spazio-di-lavoro)
+
+#### Relations
+  * derivedFrom: [Controlli del modello prima del commit](../../../ambrogio-model/system-model/Requirements/ModelDrivenDevelopment.md#controlli-del-modello-prima-del-commit)
+  * satisfiedBy: [pre-commit](../../.githooks/pre-commit)
+---
+
+### Audit delle dipendenze nella CI del client terminale
+
+Quando la CI del client terminale si esegue, il job `Terminal client checks` deve eseguire l'audit delle dipendenze del client dopo la loro installazione congelata e deve fallire se l'audit trova una vulnerabilità di gravità alta o critica non elencata fra le eccezioni accettate del modello.
+
+#### Details
+Il client non ha eccezioni: `pnpm-workspace.yaml` non dichiara `auditConfig`.
+
+#### Metadata
+  * type: requirement
+
+#### Contract References
+  * [Audit delle dipendenze con pnpm](../../../ambrogio-model/system-model/Contracts/ModelDrivenDevelopment.md#audit-delle-dipendenze-con-pnpm)
+
+#### Relations
+  * derivedFrom: [Audit delle vulnerabilità delle dipendenze](../../../ambrogio-model/system-model/Requirements/ModelDrivenDevelopment.md#audit-delle-vulnerabilità-delle-dipendenze)
+  * satisfiedBy: [ci.yml](../../.github/workflows/ci.yml)
+  * satisfiedBy: [pnpm-workspace.yaml](../../pnpm-workspace.yaml)
+---
+
+### Comando di verifica completo del client terminale
+
+Il client terminale deve offrire il comando `pnpm verify`, che esegue in locale i controlli del job `Terminal client checks` nell'ordine del comando di verifica completo comune e termina con esito non riuscito al primo controllo fallito.
+
+#### Details
+Dopo i controlli del modello, l'installazione congelata, l'audit e la preparazione del backend affiancato in `../ambrogio-backend` con `pnpm install --frozen-lockfile` e `pnpm build`, i comandi del job della CI successivi all'installazione del client sono, in quest'ordine: `pnpm typecheck`, `pnpm test`, `pnpm test:backend`, `pnpm build`.
+
+#### Metadata
+  * type: requirement
+
+#### Contract References
+  * [Comando di verifica completo con pnpm](../../../ambrogio-model/system-model/Contracts/ModelDrivenDevelopment.md#comando-di-verifica-completo-con-pnpm)
+
+#### Relations
+  * derivedFrom: [Comando di verifica completo](../../../ambrogio-model/system-model/Requirements/ModelDrivenDevelopment.md#comando-di-verifica-completo)
+  * satisfiedBy: [package.json](../../package.json)
 ---

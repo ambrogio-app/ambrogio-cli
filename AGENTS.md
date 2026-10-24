@@ -13,7 +13,7 @@ Questo repository contiene esclusivamente il client conversazionale da terminale
 
 - Usare soltanto la CLI Reqvire, alla versione scritta in `ambrogio-model/.reqvire-version`, eseguita sulla cartella di lavoro; non si usano server MCP Reqvire. La documentazione ufficiale di Reqvire, <https://reqvire.org/>, è il riferimento per il metodo e per i comandi disponibili nella versione adottata.
 - Quando la CLI non offre l'operazione, modificare direttamente il file Markdown del modello e poi eseguire `format`, `validate` e `lint` sulla cartella di lavoro.
-- Prima di un push eseguire `ambrogio-model/scripts/model-checks` e, per le modifiche significative, `ambrogio-model/scripts/change-impact-composite`, poi `pnpm typecheck`, `pnpm test`, `pnpm test:backend` e `pnpm build` in questo repository; interpretare i risultati. Il collegamento a un test non ne certifica il successo.
+- Prima di un push eseguire `pnpm verify` in questo repository, che ripete nell'ordine della CI i controlli dell'intero modello (`ambrogio-model/scripts/model-checks`), l'installazione congelata, l'audit delle dipendenze, la preparazione del backend affiancato, `pnpm typecheck`, `pnpm test`, `pnpm test:backend` e `pnpm build`, e per le modifiche significative `ambrogio-model/scripts/change-impact-composite`; interpretare i risultati. Il collegamento a un test non ne certifica il successo.
 
 ## Ordine di lavoro
 
@@ -23,4 +23,4 @@ Quando cambiano un comportamento pubblico, un testo del client o un'opzione di a
 
 ## Segreti e dati di installazione
 
-Il repository usa gitleaks secondo le regole di `ambrogio-model/AGENTS.md`: in CI su tutta la storia (`.github/workflows/secret-scan.yml`) e in locale con l'hook `.githooks/pre-commit`, da attivare in ogni clone con `git config core.hooksPath .githooks` e con `gitleaks` nel `PATH`. Non aggirare l'hook con `--no-verify`. Esempi e test usano solo valori segnaposto e nessun dato di una specifica installazione.
+Il repository usa gitleaks secondo le regole di `ambrogio-model/AGENTS.md`: in CI su tutta la storia (`.github/workflows/secret-scan.yml`) e in locale con l'hook `.githooks/pre-commit`, da attivare in ogni clone con `git config core.hooksPath .githooks` e con `gitleaks` nel `PATH`; dopo la scansione l'hook esegue `model-checks` dal checkout di `ambrogio-model` affiancato e blocca il commit se manca. Non aggirare l'hook con `--no-verify`. Esempi e test usano solo valori segnaposto e nessun dato di una specifica installazione.

@@ -9,7 +9,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/src/cli.js",
     "test": "pnpm build && node --test dist/test/*.test.js",
-    "test:backend": "pnpm build && node scripts/verify-backend.mjs"
+    "test:backend": "pnpm build && node scripts/verify-backend.mjs",
+    "verify": "../ambrogio-model/scripts/model-checks && pnpm install --frozen-lockfile && pnpm audit --audit-level high && (cd ../ambrogio-backend && pnpm install --frozen-lockfile && pnpm build) && pnpm typecheck && pnpm test && pnpm test:backend && pnpm build"
   },
   "dependencies": {
     "terminal-kit": "3.1.4"

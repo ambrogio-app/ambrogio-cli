@@ -117,9 +117,9 @@ Prima di iniziare l'interazione, il client richiede un URL base HTTP o HTTPS del
   * define: [Client conversazionale nel terminale](../Requirements/TerminalConversation.md#client-conversazionale-nel-terminale)
 ---
 
-### Installazione con pnpm 12.11.2
+### Installazione delle dipendenze del client terminale con pnpm
 
-Il client usa pnpm 12.11.2, dichiarato in `package.json` con `packageManager` `pnpm@12.11.2`, e il lockfile versionato `pnpm-lock.yaml`; il repository non contiene `package-lock.json`. La CI installa pnpm 12.11.2 e le dipendenze con `pnpm install --frozen-lockfile`, che fallisce se manifest e lockfile divergono. `pnpm-workspace.yaml` dichiara `allowBuilds` vuoto, perché nessuna dipendenza del client richiede script di build; una dipendenza che li richiede entra nell'elenco soltanto con una decisione registrata in questo contratto. L'attesa predefinita di pnpm di 24 ore per le nuove versioni pubblicate resta attiva e `pnpm-workspace.yaml` non dichiara eccezioni in `minimumReleaseAgeExclude`.
+Il client usa pnpm 12.11.2, dichiarato in `package.json` con `packageManager` `pnpm@12.11.2`, e il lockfile versionato `pnpm-lock.yaml`; il repository non contiene `package-lock.json`. La CI attiva pnpm con Corepack secondo il profilo comune di installazione con pnpm e Corepack e installa le dipendenze con `pnpm install --frozen-lockfile`, che fallisce se manifest e lockfile divergono. `pnpm-workspace.yaml` dichiara `allowBuilds` vuoto, perché nessuna dipendenza del client richiede script di build; una dipendenza che li richiede entra nell'elenco soltanto con una decisione registrata in questo contratto. L'attesa predefinita di pnpm di 24 ore per le nuove versioni pubblicate resta attiva e `pnpm-workspace.yaml` non dichiara eccezioni in `minimumReleaseAgeExclude`.
 
 #### Metadata
   * type: specification
