@@ -74,7 +74,8 @@ Ogni testo prodotto dal client esiste in italiano e in inglese con la formulazio
 | URL non analizzabile | `URL del backend non valido.` | `Invalid backend URL.` |
 | URL non ammesso | `L’URL del backend deve essere HTTP(S), senza credenziali, query o frammento.` | `The backend URL must be HTTP(S), without credentials, query or fragment.` |
 | Corpo non JSON | `Risposta JSON del backend non valida.` | `Invalid JSON response from the backend.` |
-| Errore HTTP senza messaggio pubblico | `Errore HTTP <n>.` | `HTTP error <n>.` |
+| Conversazione inesistente (`/problems/conversation-not-found`) | `Conversazione non trovata.` | `Conversation not found.` |
+| Errore HTTP generico, per ogni altro `type` o risposta d'errore che non è un Problem Details | `Errore HTTP <n>.` | `HTTP error <n>.` |
 | Elenco non valido | `Risposta dell’elenco non valida.` | `Invalid list response.` |
 | Voce dell'elenco non valida | `Voce dell’elenco non valida.` | `Invalid list entry.` |
 | Storico non valido | `Risposta dello storico non valida.` | `Invalid history response.` |

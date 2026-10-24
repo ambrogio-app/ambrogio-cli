@@ -98,6 +98,22 @@ L'ispezione passa se le istruzioni rimandano a `ambrogio-model/AGENTS.md` per le
   * verify: [Istruzioni per gli agenti del client terminale](../Requirements/TerminalConversation.md#istruzioni-per-gli-agenti-del-client-terminale)
 ---
 
+### Prova dei controlli del modello nell'hook pre-commit del client terminale
+
+In una cartella temporanea con un repository Git che usa una copia dell'hook `.githooks/pre-commit` del client e, accanto, un finto `ambrogio-model/scripts/model-checks` che registra la propria esecuzione e termina con un esito scelto dalla prova, tentare un commit privo di segreti con lo script che riesce, poi con lo script che fallisce; ripetere senza `ambrogio-model` affiancato e con un file che contiene un token fittizio.
+
+#### Details
+La prova passa se con lo script che riesce il commit è creato e lo script è stato eseguito; se con lo script che fallisce il commit è rifiutato e l'output riporta il messaggio dello script; se senza `ambrogio-model` affiancato il commit è rifiutato con il messaggio del contratto comune che indica di clonare `ambrogio-model` accanto al repository; e se il commit con il token è rifiutato senza eseguire lo script. Fallisce se uno di questi esiti differisce. Lo script finto sostituisce i controlli reali del modello, provati da «Prova dei controlli del modello dello spazio di lavoro», così che la suite resti veloce.
+
+#### Metadata
+  * type: test-verification
+
+#### Relations
+  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
+  * satisfiedBy: [secrets.test.ts](../../test/secrets.test.ts)
+  * verify: [Controlli del modello prima del commit del client terminale](../Requirements/TerminalConversation.md#controlli-del-modello-prima-del-commit-del-client-terminale)
+---
+
 ### Prova del client conversazionale nel terminale
 
 Avviare il backend affiancato nella cartella di lavoro tramite il suo ingresso di prova pubblico, «Ingresso di prova del server conversazionale», e il client terminale come processi distinti, rendendo disponibili al client soltanto il canale conversazionale `ambrogio.v1` e le API HTTP pubbliche del backend. Dal terminale inviare un nuovo turno e osservare una risposta prodotta in più frammenti; consultare le conversazioni conservate e proseguire quella creata, recuperandone lo storico dal backend. Ripetere con un turno rifiutato, per esempio la continuazione di una conversazione occupata, con un errore dopo l'ammissione a risposta già iniziata e con la chiusura della sessione prima dell'esito.
@@ -120,6 +136,22 @@ La prova passa se la persona può conversare dal terminale, osserva i frammenti 
   * verify: [Riconoscimento del completamento della risposta nel client terminale](../Requirements/TerminalConversation.md#riconoscimento-del-completamento-della-risposta-nel-client-terminale)
   * verify: [Segnalazione locale dell'interruzione della chat testuale](../Requirements/TerminalConversation.md#segnalazione-locale-dellinterruzione-della-chat-testuale)
   * verify: [Uso delle sole interfacce pubbliche del backend nel client terminale](../Requirements/TerminalConversation.md#uso-delle-sole-interfacce-pubbliche-del-backend-nel-client-terminale)
+---
+
+### Prova del comando di verifica completo del client terminale
+
+Leggere lo script `verify` di `package.json` e i comandi del job `checks` di `.github/workflows/ci.yml`.
+
+#### Details
+La prova passa se lo script `verify` è la sequenza, unita da `&&`, di `../ambrogio-model/scripts/model-checks`, `pnpm install --frozen-lockfile`, `pnpm audit --audit-level high`, `(cd ../ambrogio-backend && pnpm install --frozen-lockfile && pnpm build)` e dei comandi `pnpm` che il job esegue nella cartella del client dopo l'installazione e l'audit, nello stesso ordine. Fallisce se lo script manca, omette o riordina un comando, o se il workflow cambia i propri controlli senza che lo script li segua.
+
+#### Metadata
+  * type: test-verification
+
+#### Relations
+  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
+  * satisfiedBy: [workflows.test.ts](../../test/workflows.test.ts)
+  * verify: [Comando di verifica completo del client terminale](../Requirements/TerminalConversation.md#comando-di-verifica-completo-del-client-terminale)
 ---
 
 ### Prova del rifiuto locale del turno testuale nel client terminale
@@ -153,6 +185,22 @@ La prova passa se nessuno specificatore indica un percorso del repository `ambro
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
   * satisfiedBy: [imports.test.ts](../../test/imports.test.ts)
   * verify: [Uso delle sole interfacce pubbliche del backend nel client terminale](../Requirements/TerminalConversation.md#uso-delle-sole-interfacce-pubbliche-del-backend-nel-client-terminale)
+---
+
+### Prova dell'audit delle dipendenze nella CI del client terminale
+
+Leggere come testo `.github/workflows/ci.yml` e `pnpm-workspace.yaml` del client.
+
+#### Details
+La prova passa se il job `checks` esegue `pnpm audit --audit-level high` nella cartella `workspace/ambrogio-cli` subito dopo `pnpm install --frozen-lockfile` del client e prima di `pnpm typecheck`, se nessun comando `pnpm audit` del workflow usa `--ignore`, `--ignore-unfixable`, `--ignore-registry-errors`, `--prod` o `--dev`, e se ogni voce di `auditConfig` in `pnpm-workspace.yaml` è un singolo identificativo GHSA sotto `ignoreGhsas`. Fallisce se l'audit manca, è in un'altra posizione, ignora avvisi con un'opzione o se un'eccezione non è un singolo identificativo. L'esito dell'audit sul registro npm è dato dall'esecuzione del job, non da questa prova, che resta senza accesso alla rete.
+
+#### Metadata
+  * type: test-verification
+
+#### Relations
+  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
+  * satisfiedBy: [workflows.test.ts](../../test/workflows.test.ts)
+  * verify: [Audit delle dipendenze nella CI del client terminale](../Requirements/TerminalConversation.md#audit-delle-dipendenze-nella-ci-del-client-terminale)
 ---
 
 ### Prova dell'hook pre-commit dei segreti del client terminale
@@ -271,6 +319,22 @@ La prova passa se l'opzione prevale sulla variabile; una variabile vuota è igno
   * verify: [Testi del client terminale nella lingua dell'interfaccia](../Requirements/TerminalConversation.md#testi-del-client-terminale-nella-lingua-dellinterfaccia)
 ---
 
+### Prova della presentazione degli errori HTTP nel client terminale
+
+Con un backend HTTP controllato, far rispondere alle letture di elenco e storico su `/api/v1/` con il Problem Details `/problems/conversation-not-found`, con un Problem Details di `type` sconosciuto, con un `about:blank` di stato 500 e con una risposta d'errore JSON che non è un Problem Details, in italiano e in inglese; osservare l'errore prodotto dal modulo di comunicazione con il backend.
+
+#### Details
+La prova passa se le letture usano i percorsi `/api/v1/conversations` e `/api/v1/conversations/<id>`, se `/problems/conversation-not-found` produce la voce «Conversazione inesistente» del catalogo e ogni altro caso la voce «Errore HTTP generico» con lo stato della risposta, nella lingua scelta, e se `title`, `detail` o un campo `error` del corpo non compaiono mai nel testo mostrato. Fallisce se il testo dipende da membri diversi da `type` o se un testo del backend è mostrato.
+
+#### Metadata
+  * type: test-verification
+
+#### Relations
+  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
+  * satisfiedBy: [backend.test.ts](../../test/backend.test.ts)
+  * verify: [Presentazione degli errori HTTP nel client terminale](../Requirements/TerminalConversation.md#presentazione-degli-errori-http-nel-client-terminale)
+---
+
 ### Prova della protezione dei workflow di CI
 
 Leggere `.github/workflows/ci.yml` e `.github/workflows/secret-scan.yml` come testo e confrontarli con i valori del profilo di protezione dei workflow GitHub Actions letti dal contratto.
@@ -339,52 +403,4 @@ La prova passa se, durante l'elaborazione, il client mostra il testo del turno c
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
   * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
   * verify: [Stato del turno in elaborazione alla riapertura nel client terminale](../Requirements/TerminalConversation.md#stato-del-turno-in-elaborazione-alla-riapertura-nel-client-terminale)
----
-
-### Prova dei controlli del modello nell'hook pre-commit del client terminale
-
-In una cartella temporanea con un repository Git che usa una copia dell'hook `.githooks/pre-commit` del client e, accanto, un finto `ambrogio-model/scripts/model-checks` che registra la propria esecuzione e termina con un esito scelto dalla prova, tentare un commit privo di segreti con lo script che riesce, poi con lo script che fallisce; ripetere senza `ambrogio-model` affiancato e con un file che contiene un token fittizio.
-
-#### Details
-La prova passa se con lo script che riesce il commit è creato e lo script è stato eseguito; se con lo script che fallisce il commit è rifiutato e l'output riporta il messaggio dello script; se senza `ambrogio-model` affiancato il commit è rifiutato con il messaggio del contratto comune che indica di clonare `ambrogio-model` accanto al repository; e se il commit con il token è rifiutato senza eseguire lo script. Fallisce se uno di questi esiti differisce. Lo script finto sostituisce i controlli reali del modello, provati da «Prova dei controlli del modello dello spazio di lavoro», così che la suite resti veloce.
-
-#### Metadata
-  * type: test-verification
-
-#### Relations
-  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
-  * satisfiedBy: [secrets.test.ts](../../test/secrets.test.ts)
-  * verify: [Controlli del modello prima del commit del client terminale](../Requirements/TerminalConversation.md#controlli-del-modello-prima-del-commit-del-client-terminale)
----
-
-### Prova dell'audit delle dipendenze nella CI del client terminale
-
-Leggere come testo `.github/workflows/ci.yml` e `pnpm-workspace.yaml` del client.
-
-#### Details
-La prova passa se il job `checks` esegue `pnpm audit --audit-level high` nella cartella `workspace/ambrogio-cli` subito dopo `pnpm install --frozen-lockfile` del client e prima di `pnpm typecheck`, se nessun comando `pnpm audit` del workflow usa `--ignore`, `--ignore-unfixable`, `--ignore-registry-errors`, `--prod` o `--dev`, e se ogni voce di `auditConfig` in `pnpm-workspace.yaml` è un singolo identificativo GHSA sotto `ignoreGhsas`. Fallisce se l'audit manca, è in un'altra posizione, ignora avvisi con un'opzione o se un'eccezione non è un singolo identificativo. L'esito dell'audit sul registro npm è dato dall'esecuzione del job, non da questa prova, che resta senza accesso alla rete.
-
-#### Metadata
-  * type: test-verification
-
-#### Relations
-  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
-  * satisfiedBy: [workflows.test.ts](../../test/workflows.test.ts)
-  * verify: [Audit delle dipendenze nella CI del client terminale](../Requirements/TerminalConversation.md#audit-delle-dipendenze-nella-ci-del-client-terminale)
----
-
-### Prova del comando di verifica completo del client terminale
-
-Leggere lo script `verify` di `package.json` e i comandi del job `checks` di `.github/workflows/ci.yml`.
-
-#### Details
-La prova passa se lo script `verify` è la sequenza, unita da `&&`, di `../ambrogio-model/scripts/model-checks`, `pnpm install --frozen-lockfile`, `pnpm audit --audit-level high`, `(cd ../ambrogio-backend && pnpm install --frozen-lockfile && pnpm build)` e dei comandi `pnpm` che il job esegue nella cartella del client dopo l'installazione e l'audit, nello stesso ordine. Fallisce se lo script manca, omette o riordina un comando, o se il workflow cambia i propri controlli senza che lo script li segua.
-
-#### Metadata
-  * type: test-verification
-
-#### Relations
-  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
-  * satisfiedBy: [workflows.test.ts](../../test/workflows.test.ts)
-  * verify: [Comando di verifica completo del client terminale](../Requirements/TerminalConversation.md#comando-di-verifica-completo-del-client-terminale)
 ---
