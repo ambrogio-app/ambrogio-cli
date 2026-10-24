@@ -9,7 +9,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/src/cli.js",
     "test": "pnpm build && node --test dist/test/*.test.js",
-    "test:backend": "pnpm build && node scripts/verify-pinned-backend.mjs"
+    "test:backend": "pnpm build && node scripts/verify-backend.mjs"
   },
   "dependencies": {
     "terminal-kit": "3.1.4"

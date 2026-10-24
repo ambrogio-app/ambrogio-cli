@@ -4,15 +4,17 @@ import { test } from 'node:test';
 
 // Verifications: Prova della protezione dei workflow di CI; Prova della configurazione del percorso CI;
 // Prova della configurazione della scansione dei segreti in CI.
-// The workflows are read as text: the tests need no YAML parser and check the lines the contract fixes.
-// Compiled to dist/test/, so the repository root is two levels up.
+// The workflows are read as text: the tests need no YAML parser and check the lines the contracts fix.
+// Compiled to dist/test/, so the repository root is two levels up; the common contracts live in the
+// ambrogio-model repository checked out side by side in the same workspace folder.
 const root = new URL('../../', import.meta.url);
 const read = (path: string) => readFileSync(new URL(path, root), 'utf8');
 const workflows = { 'ci.yml': read('.github/workflows/ci.yml'), 'secret-scan.yml': read('.github/workflows/secret-scan.yml') };
-const contracts = read('system-model/Contracts/TerminalConversation.md');
+const local = read('system-model/Contracts/TerminalConversation.md');
+const common = read('../ambrogio-model/system-model/Contracts/ModelDrivenDevelopment.md');
 
-function contract(name: string): string {
-  const text = contracts.split(`### ${name}\n`)[1]?.split('#### Metadata')[0];
+function contract(markdown: string, name: string): string {
+  const text = markdown.split(`### ${name}\n`)[1]?.split('#### Metadata')[0];
   assert(text, `contract ${name} not found`);
   return text;
 }
@@ -37,16 +39,17 @@ function steps(job: string): string[] {
   return job.split(/^ {6}- /m).slice(1);
 }
 
-const protection = contract('Profilo di protezione dei workflow GitHub Actions');
-const pins = Object.fromEntries([...protection.matchAll(/`(actions\/[\w-]+)` fissato al commit `([0-9a-f]{40})` \((v\d+)\)/g)]
+const commonProtection = contract(common, 'Profilo comune dei workflow GitHub Actions');
+const protection = contract(local, 'Profilo di protezione dei workflow GitHub Actions');
+const pins = Object.fromEntries([...commonProtection.matchAll(/`(actions\/[\w-]+)@([0-9a-f]{40})` \((v\d+)\)/g)]
   .map(match => [match[1]!, { commit: match[2]!, version: match[3]! }]));
-const runsOn = /`runs-on: ([^`]+)`/.exec(protection)?.[1];
+const runsOn = /runner `([^`]+)`/.exec(commonProtection)?.[1];
 const timeouts: Record<string, Record<string, string>> = {};
 for (const match of protection.matchAll(/(\d+) per il job `([\w-]+)` di `([\w.-]+)`/g)) {
   (timeouts[match[3]!] ??= {})[match[2]!] = match[1]!;
 }
-const scanning = contract('Profilo di scansione dei segreti con gitleaks');
-const gitleaksVersion = /gitleaks v(\d+\.\d+\.\d+), archivio `gitleaks_\1_linux_x64\.tar\.gz`/.exec(scanning)?.[1];
+const scanning = contract(common, 'Profilo di scansione dei segreti con gitleaks');
+const gitleaksVersion = /archivio `gitleaks_(\d+\.\d+\.\d+)_linux_x64\.tar\.gz`/.exec(scanning)?.[1];
 const gitleaksSha = /SHA-256 `([0-9a-f]{64})`/.exec(scanning)?.[1];
 
 test('the contracts provide the values the workflow tests compare against', () => {
@@ -129,6 +132,26 @@ test('ci.yml runs on the declared triggers', () => {
   assert.equal(on.push, '    branches: [main]');
 });
 
+test('ci.yml checks out the workspace side by side and checks the whole model', () => {
+  const text = workflows['ci.yml'];
+  assert.match(text, /^ {6}BRANCH: \$\{\{ github\.head_ref \|\| github\.ref_name \}\}$/m);
+  const job = children(block(text, 'jobs'), 2).checks ?? '';
+  const checkout = steps(job).find(step => step.includes('uses: actions/checkout@')) ?? '';
+  assert.match(checkout, /^ {10}path: workspace\/ambrogio-cli$/m);
+  assert.match(checkout, /^ {10}fetch-depth: 0$/m);
+  const commands = runs(job);
+  const clone = commands.findIndex(run => run.includes('git clone --quiet --branch "$ref" "$url" workspace/ambrogio-model'));
+  assert(clone >= 0, 'ambrogio-model is cloned into workspace/ambrogio-model');
+  const lines = commands[clone]!.split('\n');
+  assert(lines.includes('url="https://github.com/ambrogio-app/ambrogio-model.git"'));
+  assert(lines.includes('ref=main'));
+  assert(lines.includes('if git ls-remote --exit-code --heads "$url" "$BRANCH" >/dev/null; then ref="$BRANCH"; fi'));
+  const workspace = commands.indexOf('workspace/ambrogio-model/scripts/checkout-workspace workspace "$BRANCH"');
+  const model = commands.indexOf('workspace/ambrogio-model/scripts/model-checks --workspace workspace');
+  assert(clone < workspace && workspace < model, 'clone, checkout-workspace and model-checks run in this order');
+  assert.doesNotMatch(text, /reqvire@|reqvire-version|check-model/, 'no step fixes a Reqvire version or runs the old checks');
+});
+
 test('ci.yml installs Node.js 24, pnpm 12.11.2, the frozen dependencies and gitleaks, then runs the checks in order', () => {
   const job = children(block(workflows['ci.yml'], 'jobs'), 2).checks ?? '';
   assert.match(job, /^ {10}node-version: '24'$/m);
@@ -139,18 +162,26 @@ test('ci.yml installs Node.js 24, pnpm 12.11.2, the frozen dependencies and gitl
     return index;
   };
   const order = [
+    'workspace/ambrogio-model/scripts/model-checks --workspace workspace',
+    'npx --yes "pnpm@${pnpm_version}" install --frozen-lockfile',
+    'npx --yes "pnpm@${pnpm_version}" build',
     'npm install --global pnpm@12.11.2',
     'pnpm install --frozen-lockfile',
-    'npx --yes @reqvire-org/reqvire@1.3.2 --workspace "$PWD" validate',
-    'npx --yes @reqvire-org/reqvire@1.3.2 --workspace "$PWD" lint --json > "$report"',
-    'node scripts/check-model.mjs',
     'pnpm typecheck',
     'pnpm test',
+    'pnpm test:backend',
     'pnpm build',
   ].map(position);
   assert.deepEqual(order, [...order].sort((a, b) => a - b), 'the checks run in the required order');
-  assert.match(commands[order[3]!]!, /^set -euo pipefail$/m);
-  assert.match(commands[order[3]!]!, /^jq -e '\.auto_fixable == \[\] and \.needs_manual_review == \[\]' "\$report"$/m);
+  assert.match(steps(job).find(step => step.includes('--frozen-lockfile') && step.includes('pnpm_version')) ?? '',
+    /^ {8}working-directory: workspace\/ambrogio-backend$/m, 'the backend is built in its side-by-side checkout');
+  assert.match(commands[order[1]!]!,
+    /^pnpm_version="\$\(node -p "require\('\.\/package\.json'\)\.packageManager\.replace\(\/\^pnpm@\/, ''\)"\)"$/m,
+    'the backend is installed with the pnpm version it declares');
+  for (const command of ['pnpm install --frozen-lockfile', 'pnpm typecheck', 'pnpm test', 'pnpm test:backend', 'pnpm build']) {
+    const step = steps(job).find(step => /^ {8}run: (.+)$/m.exec(step)?.[1] === command);
+    assert.match(step ?? '', /^ {8}working-directory: workspace\/ambrogio-cli$/m, `${command} runs in the client`);
+  }
   const install = commands.findIndex(run => run.includes('sha256sum --check --strict'));
   assert(install >= 0 && install < order[6]!, 'gitleaks is installed before the tests');
 });
