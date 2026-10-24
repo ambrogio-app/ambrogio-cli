@@ -60,6 +60,7 @@ export type Texts = {
   urlNotAllowed: string;
   invalidJson: string;
   httpError: (status: number) => string;
+  conversationNotFound: string;
   invalidList: string;
   invalidListEntry: string;
   invalidHistory: string;
@@ -112,6 +113,7 @@ export const texts: Record<Language, Texts> = {
     urlNotAllowed: 'L’URL del backend deve essere HTTP(S), senza credenziali, query o frammento.',
     invalidJson: 'Risposta JSON del backend non valida.',
     httpError: status => `Errore HTTP ${status}.`,
+    conversationNotFound: 'Conversazione non trovata.',
     invalidList: 'Risposta dell’elenco non valida.',
     invalidListEntry: 'Voce dell’elenco non valida.',
     invalidHistory: 'Risposta dello storico non valida.',
@@ -162,6 +164,7 @@ export const texts: Record<Language, Texts> = {
     urlNotAllowed: 'The backend URL must be HTTP(S), without credentials, query or fragment.',
     invalidJson: 'Invalid JSON response from the backend.',
     httpError: status => `HTTP error ${status}.`,
+    conversationNotFound: 'Conversation not found.',
     invalidList: 'Invalid list response.',
     invalidListEntry: 'Invalid list entry.',
     invalidHistory: 'Invalid history response.',

@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 // Verifications: Prova della protezione dei workflow di CI; Prova della configurazione del percorso CI;
-// Prova della configurazione della scansione dei segreti in CI.
+// Prova della configurazione della scansione dei segreti in CI; Prova dell'audit delle dipendenze nella CI
+// del client terminale; Prova del comando di verifica completo del client terminale.
 // The workflows are read as text: the tests need no YAML parser and check the lines the contracts fix.
 // Compiled to dist/test/, so the repository root is two levels up; the common contracts live in the
 // ambrogio-model repository checked out side by side in the same workspace folder.
@@ -152,38 +153,71 @@ test('ci.yml checks out the workspace side by side and checks the whole model', 
   assert.doesNotMatch(text, /reqvire@|reqvire-version|check-model/, 'no step fixes a Reqvire version or runs the old checks');
 });
 
-test('ci.yml installs Node.js 24, pnpm 12.11.2, the frozen dependencies and gitleaks, then runs the checks in order', () => {
-  const job = children(block(workflows['ci.yml'], 'jobs'), 2).checks ?? '';
+test('ci.yml activates pnpm with Corepack, installs the frozen dependencies, audits them and gitleaks, then runs the checks in order', () => {
+  const text = workflows['ci.yml'];
+  const job = children(block(text, 'jobs'), 2).checks ?? '';
   assert.match(job, /^ {10}node-version: '24'$/m);
+  assert.match(job, /^ {6}COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'$/m, 'Corepack never waits for a download prompt');
+  assert.doesNotMatch(text, /npm install --global|npm i -g|npx[^\n]*pnpm/, 'pnpm comes from Corepack only');
   const commands = runs(job);
-  const position = (command: string) => {
-    const index = commands.findIndex(run => run.split('\n').includes(command));
+  const position = (command: string, from = 0) => {
+    const index = commands.findIndex((run, at) => at >= from && run.split('\n').includes(command));
     assert(index >= 0, `${command} is missing`);
     return index;
   };
+  const backendInstall = position('pnpm install --frozen-lockfile');
   const order = [
-    'workspace/ambrogio-model/scripts/model-checks --workspace workspace',
-    'npx --yes "pnpm@${pnpm_version}" install --frozen-lockfile',
-    'npx --yes "pnpm@${pnpm_version}" build',
-    'npm install --global pnpm@12.11.2',
-    'pnpm install --frozen-lockfile',
-    'pnpm typecheck',
-    'pnpm test',
-    'pnpm test:backend',
-    'pnpm build',
-  ].map(position);
+    position('workspace/ambrogio-model/scripts/model-checks --workspace workspace'),
+    position('corepack enable'),
+    backendInstall,
+    position('pnpm build'),
+    position('pnpm install --frozen-lockfile', backendInstall + 1),
+    position('pnpm audit --audit-level high'),
+    position('pnpm typecheck'),
+    position('pnpm test'),
+    position('pnpm test:backend'),
+    position('pnpm build', backendInstall + 1),
+  ];
   assert.deepEqual(order, [...order].sort((a, b) => a - b), 'the checks run in the required order');
-  assert.match(steps(job).find(step => step.includes('--frozen-lockfile') && step.includes('pnpm_version')) ?? '',
-    /^ {8}working-directory: workspace\/ambrogio-backend$/m, 'the backend is built in its side-by-side checkout');
-  assert.match(commands[order[1]!]!,
-    /^pnpm_version="\$\(node -p "require\('\.\/package\.json'\)\.packageManager\.replace\(\/\^pnpm@\/, ''\)"\)"$/m,
-    'the backend is installed with the pnpm version it declares');
-  for (const command of ['pnpm install --frozen-lockfile', 'pnpm typecheck', 'pnpm test', 'pnpm test:backend', 'pnpm build']) {
+  assert.equal(order[5], order[4]! + 1, 'the audit runs right after the client installation');
+  assert.match(steps(job).find(step => step.includes("git log -1 --format='ambrogio-backend %H'")) ?? '', /^ {8}working-directory: workspace\/ambrogio-backend$/m,
+    'the backend is installed and built in its side-by-side checkout, with the pnpm version it declares');
+  for (const command of ['pnpm install --frozen-lockfile', 'pnpm audit --audit-level high', 'pnpm typecheck', 'pnpm test',
+    'pnpm test:backend', 'pnpm build']) {
     const step = steps(job).find(step => /^ {8}run: (.+)$/m.exec(step)?.[1] === command);
     assert.match(step ?? '', /^ {8}working-directory: workspace\/ambrogio-cli$/m, `${command} runs in the client`);
   }
   const install = commands.findIndex(run => run.includes('sha256sum --check --strict'));
-  assert(install >= 0 && install < order[6]!, 'gitleaks is installed before the tests');
+  assert(install >= 0 && install < order[7]!, 'gitleaks is installed before the tests');
+});
+
+test('the dependency audit ignores no advisory except single GHSA identifiers recorded in pnpm-workspace.yaml', () => {
+  for (const audit of Object.values(workflows).flatMap(text => text.match(/pnpm audit.*/g) ?? [])) {
+    assert.equal(audit, 'pnpm audit --audit-level high');
+  }
+  const workspace = read('pnpm-workspace.yaml');
+  const config = /^auditConfig:\n((?: {2,}.*\n?)*)/m.exec(workspace)?.[1];
+  if (config !== undefined) {
+    const lines = config.split('\n').filter(line => line.trim() !== '');
+    assert.equal(lines[0], '  ignoreGhsas:', 'auditConfig only lists ignoreGhsas');
+    for (const line of lines.slice(1)) assert.match(line, /^ {4}- GHSA(?:-[23456789cfghjmpqrvwx]{4}){3}$/);
+  }
+});
+
+test('pnpm verify runs the model checks, the frozen installation, the audit, the backend preparation and the CI checks in order', () => {
+  const manifest = JSON.parse(read('package.json')) as { scripts?: Record<string, string> };
+  const job = children(block(workflows['ci.yml'], 'jobs'), 2).checks ?? '';
+  const clientSteps = steps(job).filter(step => /^ {8}working-directory: workspace\/ambrogio-cli$/m.test(step));
+  const ciCommands = clientSteps.map(step => /^ {8}run: (.+)$/m.exec(step)?.[1] ?? '')
+    .filter(command => !['pnpm install --frozen-lockfile', 'pnpm audit --audit-level high'].includes(command));
+  assert.deepEqual(ciCommands, ['pnpm typecheck', 'pnpm test', 'pnpm test:backend', 'pnpm build']);
+  assert.equal(manifest.scripts?.verify, [
+    '../ambrogio-model/scripts/model-checks',
+    'pnpm install --frozen-lockfile',
+    'pnpm audit --audit-level high',
+    '(cd ../ambrogio-backend && pnpm install --frozen-lockfile && pnpm build)',
+    ...ciCommands,
+  ].join(' && '));
 });
 
 test('ci.yml installs gitleaks with the version, checksum and script of secret-scan.yml', () => {

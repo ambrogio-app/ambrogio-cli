@@ -74,7 +74,8 @@ Ogni testo prodotto dal client esiste in italiano e in inglese con la formulazio
 | URL non analizzabile | `URL del backend non valido.` | `Invalid backend URL.` |
 | URL non ammesso | `L’URL del backend deve essere HTTP(S), senza credenziali, query o frammento.` | `The backend URL must be HTTP(S), without credentials, query or fragment.` |
 | Corpo non JSON | `Risposta JSON del backend non valida.` | `Invalid JSON response from the backend.` |
-| Errore HTTP senza messaggio pubblico | `Errore HTTP <n>.` | `HTTP error <n>.` |
+| Conversazione inesistente (`/problems/conversation-not-found`) | `Conversazione non trovata.` | `Conversation not found.` |
+| Errore HTTP generico, per ogni altro `type` o risposta d'errore che non è un Problem Details | `Errore HTTP <n>.` | `HTTP error <n>.` |
 | Elenco non valido | `Risposta dell’elenco non valida.` | `Invalid list response.` |
 | Voce dell'elenco non valida | `Voce dell’elenco non valida.` | `Invalid list entry.` |
 | Storico non valido | `Risposta dello storico non valida.` | `Invalid history response.` |
@@ -117,9 +118,9 @@ Prima di iniziare l'interazione, il client richiede un URL base HTTP o HTTPS del
   * define: [Client conversazionale nel terminale](../Requirements/TerminalConversation.md#client-conversazionale-nel-terminale)
 ---
 
-### Installazione con pnpm 12.11.2
+### Installazione delle dipendenze del client terminale con pnpm
 
-Il client usa pnpm 12.11.2, dichiarato in `package.json` con `packageManager` `pnpm@12.11.2`, e il lockfile versionato `pnpm-lock.yaml`; il repository non contiene `package-lock.json`. La CI installa pnpm 12.11.2 e le dipendenze con `pnpm install --frozen-lockfile`, che fallisce se manifest e lockfile divergono. `pnpm-workspace.yaml` dichiara `allowBuilds` vuoto, perché nessuna dipendenza del client richiede script di build; una dipendenza che li richiede entra nell'elenco soltanto con una decisione registrata in questo contratto. L'attesa predefinita di pnpm di 24 ore per le nuove versioni pubblicate resta attiva e `pnpm-workspace.yaml` non dichiara eccezioni in `minimumReleaseAgeExclude`.
+Il client usa pnpm 12.11.2, dichiarato in `package.json` con `packageManager` `pnpm@12.11.2`, e il lockfile versionato `pnpm-lock.yaml`; il repository non contiene `package-lock.json`. La CI attiva pnpm con Corepack secondo il profilo comune di installazione con pnpm e Corepack e installa le dipendenze con `pnpm install --frozen-lockfile`, che fallisce se manifest e lockfile divergono. `pnpm-workspace.yaml` dichiara `allowBuilds` vuoto, perché nessuna dipendenza del client richiede script di build; una dipendenza che li richiede entra nell'elenco soltanto con una decisione registrata in questo contratto. L'attesa predefinita di pnpm di 24 ore per le nuove versioni pubblicate resta attiva e `pnpm-workspace.yaml` non dichiara eccezioni in `minimumReleaseAgeExclude`.
 
 #### Metadata
   * type: specification

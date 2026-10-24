@@ -15,6 +15,10 @@ function json(response: ServerResponse, body: unknown, status = 200): void {
   response.writeHead(status, { 'Content-Type': 'application/json' }).end(JSON.stringify(body));
 }
 
+function problem(response: ServerResponse, type: string, title: string, status: number): void {
+  response.writeHead(status, { 'Content-Type': 'application/problem+json' }).end(JSON.stringify({ type, title, status }));
+}
+
 function conversation(id: string, texts: readonly string[]) {
   return { id, createdAt: at, lastActivityAt: at, turns: texts.map((text, index) => ({ id: `t${index + 1}`, text,
     acceptedAt: at, status: 'answered', answer: 'Risposta', finishedAt: at })) };
@@ -51,9 +55,9 @@ test('il ridimensionamento ricalcola i pannelli e sotto 70×14 chiede di allarga
       turn.send({ type: 'turn.completed', turnId: `t${turns.length}`, expectsReply: false });
     },
     http(request, response) {
-      if (request.url === '/api/conversations') json(response, { items: [], nextCursor: null });
-      else if (request.url === '/api/conversations/c1') json(response, conversation('c1', turns.map(turn => turn.text)));
-      else json(response, { error: 'Non trovata.' }, 404);
+      if (request.url === '/api/v1/conversations') json(response, { items: [], nextCursor: null });
+      else if (request.url === '/api/v1/conversations/c1') json(response, conversation('c1', turns.map(turn => turn.text)));
+      else problem(response, '/problems/conversation-not-found', 'Conversation not found', 404);
     },
   });
   const terminal = await startTerminal(executable, ['--server', fake.url], { cols: 100, rows: 30, env: environment });
@@ -104,9 +108,9 @@ test('un testo vuoto o di soli spazi è rifiutato con il messaggio del catalogo 
       turn.send({ type: 'turn.completed', turnId: 't1', expectsReply: false });
     },
     http(request, response) {
-      if (request.url === '/api/conversations') json(response, { items: [], nextCursor: null });
-      else if (request.url === '/api/conversations/c1') json(response, conversation('c1', turns));
-      else json(response, { error: 'Non trovata.' }, 404);
+      if (request.url === '/api/v1/conversations') json(response, { items: [], nextCursor: null });
+      else if (request.url === '/api/v1/conversations/c1') json(response, conversation('c1', turns));
+      else problem(response, '/problems/conversation-not-found', 'Conversation not found', 404);
     },
   });
   const terminal = await startTerminal(executable, ['--server', fake.url], { cols: 100, rows: 30, env: environment });
@@ -141,14 +145,14 @@ test('una conversazione con storico non disponibile resta selezionabile con l’
   const unavailable = '0123456789abcdef-unavailable';
   let unavailableReads = 0;
   const fake = await startFakeBackend({ http(request, response) {
-    if (request.url === '/api/conversations') {
+    if (request.url === '/api/v1/conversations') {
       json(response, { items: [{ id: 'c1', lastActivityAt: at }, { id: unavailable, lastActivityAt: at }], nextCursor: null });
-    } else if (request.url === '/api/conversations/c1') json(response, conversation('c1', ['messaggio c1']));
-    else if (request.url === `/api/conversations/${unavailable}`) {
+    } else if (request.url === '/api/v1/conversations/c1') json(response, conversation('c1', ['messaggio c1']));
+    else if (request.url === `/api/v1/conversations/${unavailable}`) {
       unavailableReads += 1;
-      if (unavailableReads === 1) json(response, { error: 'Storico non disponibile.' }, 500);
+      if (unavailableReads === 1) problem(response, 'about:blank', 'Internal Server Error', 500);
       else json(response, conversation(unavailable, ['messaggio recuperato']));
-    } else json(response, { error: 'Non trovata.' }, 404);
+    } else problem(response, '/problems/conversation-not-found', 'Conversation not found', 404);
   } });
   const terminal = await startTerminal(executable, ['--server', fake.url], { cols: 100, rows: 30, env: environment });
   try {
@@ -176,10 +180,10 @@ test('l’aggiornamento presenta l’ordine corrente dell’archivio e prosegue 
   };
   const fake = await startFakeBackend({ http(request, response) {
     const url = new URL(request.url ?? '', 'http://localhost');
-    if (url.pathname === '/api/conversations') {
+    if (url.pathname === '/api/v1/conversations') {
       lists.push(url.search);
       const page = pages[archive]?.[url.searchParams.get('cursor') ?? ''];
-      if (!page) { json(response, { error: 'Cursor non valido.' }, 400); return; }
+      if (!page) { problem(response, '/problems/invalid-pagination', 'Invalid pagination request', 400); return; }
       json(response, { items: page.items.map(id => ({ id, lastActivityAt: at })), nextCursor: page.nextCursor });
     } else {
       const id = url.pathname.split('/').at(-1) ?? '';
