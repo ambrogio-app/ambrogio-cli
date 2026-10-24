@@ -34,7 +34,7 @@ On the left you see your conversations; on the right, the open conversation and 
 ```mermaid
 flowchart LR
     U((You)) --> TUI[Terminal UI]
-    TUI -- "GET /api/conversations<br/>list and history" --> B[ambrogio-backend]
+    TUI -- "GET /api/v1/conversations<br/>list and history" --> B[ambrogio-backend]
     TUI <-- "WebSocket /api/session<br/>ambrogio.v1 turns" --> B
 ```
 
