@@ -448,6 +448,9 @@ Quando un turno inviato dal client terminale si conclude come interrotto, il cli
 
 Il client terminale deve essere implementato in TypeScript per Node.js e offrire una schermata conversazionale persistente a due pannelli mediante Terminal Kit.
 
+#### Details
+Origine: baseline Reqvire «Strict TypeScript compilation», adottata; «ESM build for Node.js», adattata: un solo `tsconfig.json` compila `src` e `test` in `dist`, con le librerie `ES2022` e `DOM`, senza un `tsconfig.build.json` separato; «Vitest as test runner», adattata: il client terminale esegue i test compilati in `dist/test/` con il runner integrato di Node.js, `node --test`, invece di Vitest.
+
 #### Metadata
   * type: requirement
 
@@ -531,8 +534,8 @@ Una versione esatta rende esplicito nel manifest ogni aggiornamento di dipendenz
   * type: requirement
 
 #### Relations
+  * derivedFrom: [Installazione delle dipendenze con pnpm attivato da Corepack](../../../ambrogio-model/system-model/Requirements/ModelDrivenDevelopment.md#installazione-delle-dipendenze-con-pnpm-attivato-da-corepack)
   * satisfiedBy: [package.json](../../package.json)
-  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
 ### Vista persistente della conversazione
@@ -548,4 +551,21 @@ Quando il client è attivo in un terminale interattivo, deve mostrare l'elenco d
 #### Relations
   * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
+### Client terminale compilato provato come processo
+
+Le prove del client terminale devono avviare il client compilato `dist/src/cli.js` come processo, verificando un avvio rifiutato per l'URL del backend mancante e, contro il backend affiancato, una conversazione riuscita nella schermata del terminale.
+
+#### Details
+Le matrici dei casi della schermata e del protocollo restano nelle prove dei singoli confini.
+
+#### Metadata
+  * type: requirement
+
+#### Relations
+  * derivedFrom: [Artefatti compilati provati come processi](../../../ambrogio-model/system-model/Requirements/CodeArchitecture.md#artefatti-compilati-provati-come-processi)
+  * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
+  * satisfiedBy: [verify-backend.mjs](../../scripts/verify-backend.mjs)
+  * specify: [Architettura del codice](../../../ambrogio-model/system-model/Capabilities/Engineering.md#architettura-del-codice)
 ---
