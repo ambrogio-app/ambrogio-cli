@@ -50,7 +50,7 @@ flowchart LR
 - A running [ambrogio-backend](https://github.com/ambrogio-app/ambrogio-backend) that this machine can reach
 - Runtime library: [Terminal Kit](https://github.com/cronvel/terminal-kit). The client uses Node's built-in `WebSocket` and `fetch`
 
-The backend version this client is compatible with is recorded in [`system-model/Contracts/TerminalConversation.md`](system-model/Contracts/TerminalConversation.md).
+The client uses only the backend's public interfaces: the `ambrogio.v1` protocol and the HTTP API.
 
 ## Quick start
 
@@ -77,10 +77,10 @@ The interface language is `--language it|en` or `AMBROGIO_LANGUAGE`. Without the
 
 ```bash
 pnpm test               # protocol and UI tests against a local fake backend
-pnpm test:backend       # end-to-end test against a pinned ambrogio-backend checkout
+pnpm test:backend       # end-to-end test against the ambrogio-backend checkout next to this one
 ```
 
-`pnpm test:backend` expects a built checkout of `ambrogio-backend` at the pinned revision, at `../ambrogio-backend` or at the path in `AMBROGIO_BACKEND_REPO`. It runs the backend in the same process.
+`pnpm test:backend` expects a built checkout of `ambrogio-backend` at `../ambrogio-backend` or at the path in `AMBROGIO_BACKEND_REPO`. It runs the backend in the same process.
 
 Dependencies are pinned to exact versions in `package.json` and resolved in `pnpm-lock.yaml`. `pnpm-workspace.yaml` allows no dependency build scripts, and pnpm's default minimum release age for new versions stays on.
 
@@ -90,7 +90,7 @@ Dependencies are pinned to exact versions in `package.json` and resolved in `pnp
 git config core.hooksPath .githooks
 ```
 
-Ambrogio is developed model first with [Reqvire](https://reqvire.org/). This repository is self-contained: the repository root is its Reqvire workspace, and [`system-model/`](system-model/) records the client's own requirements, contracts, verifications and technical decisions. The backend's public protocol and HTTP API belong to `ambrogio-backend`. [`AGENTS.md`](AGENTS.md) describes the workflow.
+Ambrogio is developed model first with [Reqvire](https://reqvire.org/). Its model is one, spread over [ambrogio-model](https://github.com/ambrogio-app/ambrogio-model) and the product repositories checked out side by side in one workspace folder: [`system-model/`](system-model/) holds the client's own requirements, contracts, verifications and technical decisions, linked directly to the shared decisions in `ambrogio-model` and to the backend contracts for the public protocol and HTTP API. [`AGENTS.md`](AGENTS.md) describes the workflow.
 
 ## License
 
