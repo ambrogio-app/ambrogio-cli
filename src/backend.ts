@@ -79,13 +79,28 @@ async function readJson(response: Response, texts: Texts): Promise<unknown> {
   try { return await response.json(); } catch { throw new Error(texts.invalidJson); }
 }
 
-async function ensureSuccess(response: Response, texts: Texts): Promise<unknown> {
-  const body = await readJson(response, texts);
-  if (!response.ok) {
-    const error = object(body)?.error;
-    throw new PublicHttpError(response.status, string(error) ? error : texts.httpError(response.status));
+/** The `type` of a Problem Details error response, the only member the client interprets. */
+async function problemType(response: Response): Promise<string | undefined> {
+  if (!/^application\/problem\+json(?:\s*;|$)/i.test(response.headers.get('content-type') ?? '')) return undefined;
+  try {
+    const type = object(await response.json())?.type;
+    return string(type) ? type : undefined;
+  } catch {
+    return undefined;
   }
-  return body;
+}
+
+/** The catalogue text of an HTTP error response, chosen from the problem `type` only. */
+export async function httpErrorText(response: Response, texts: Texts): Promise<string> {
+  switch (await problemType(response)) {
+    case '/problems/conversation-not-found': return texts.conversationNotFound;
+    default: return texts.httpError(response.status);
+  }
+}
+
+async function ensureSuccess(response: Response, texts: Texts): Promise<unknown> {
+  if (!response.ok) throw new PublicHttpError(response.status, await httpErrorText(response, texts));
+  return readJson(response, texts);
 }
 
 /** The WebSocket address of the conversation channel under the backend base URL. */
@@ -248,7 +263,7 @@ export class AmbrogioBackend {
   }
 
   async list(cursor?: string): Promise<ConversationPage> {
-    const url = this.endpoint('api/conversations');
+    const url = this.endpoint('api/v1/conversations');
     if (cursor !== undefined) url.searchParams.set('cursor', cursor);
     const response = await this.request(url, { headers: { Accept: 'application/json' } });
     const body = requireObject(await ensureSuccess(response, this.texts), this.texts.invalidList);
@@ -264,7 +279,7 @@ export class AmbrogioBackend {
   }
 
   async history(conversationId: string): Promise<Conversation> {
-    const response = await this.request(this.endpoint(`api/conversations/${encodeURIComponent(conversationId)}`),
+    const response = await this.request(this.endpoint(`api/v1/conversations/${encodeURIComponent(conversationId)}`),
       { headers: { Accept: 'application/json' } });
     const body = requireObject(await ensureSuccess(response, this.texts), this.texts.invalidHistory);
     if (!string(body.id) || !string(body.createdAt) || !string(body.lastActivityAt) || !Array.isArray(body.turns)) {

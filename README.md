@@ -78,13 +78,16 @@ The interface language is `--language it|en` or `AMBROGIO_LANGUAGE`. Without the
 ```bash
 pnpm test               # protocol and UI tests against a local fake backend
 pnpm test:backend       # end-to-end test against the ambrogio-backend checkout next to this one
+pnpm verify             # every CI check in order: model checks, frozen install, dependency audit, backend build, typecheck, tests, build
 ```
+
+CI activates pnpm with Corepack at the version in `packageManager` and fails on high or critical advisories reported by `pnpm audit`.
 
 `pnpm test:backend` expects a built checkout of `ambrogio-backend` at `../ambrogio-backend` or at the path in `AMBROGIO_BACKEND_REPO`. It runs the backend in the same process.
 
 Dependencies are pinned to exact versions in `package.json` and resolved in `pnpm-lock.yaml`. `pnpm-workspace.yaml` allows no dependency build scripts, and pnpm's default minimum release age for new versions stays on.
 
-[gitleaks](https://github.com/gitleaks/gitleaks) 8.30.1 checks for secrets. CI scans the whole history on every push and pull request (`.github/workflows/secret-scan.yml`). `pnpm test` also tests the pre-commit hook and the CI scan command in temporary Git repositories, so it needs `gitleaks` on `PATH`; the CI checks job installs it. Locally, enable the versioned pre-commit hook once per clone; it needs `gitleaks` on `PATH` and blocks commits that add a secret:
+[gitleaks](https://github.com/gitleaks/gitleaks) 8.30.1 checks for secrets. CI scans the whole history on every push and pull request (`.github/workflows/secret-scan.yml`). `pnpm test` also tests the pre-commit hook and the CI scan command in temporary Git repositories, so it needs `gitleaks` on `PATH`; the CI checks job installs it. Locally, enable the versioned pre-commit hook once per clone; it needs `gitleaks` on `PATH` and blocks commits that add a secret. After the secret scan it runs the model checks of the workspace from the `ambrogio-model` checkout next to this repository, and blocks the commit if that checkout is missing:
 
 ```bash
 git config core.hooksPath .githooks

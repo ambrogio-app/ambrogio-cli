@@ -41,15 +41,15 @@ test('la chat resta aperta tra due turni e la barra laterale usa le anteprime HT
       const path = request.url ?? '';
       paths.push(path);
       response.setHeader('Content-Type', 'application/json');
-      if (path === '/api/conversations') {
+      if (path === '/api/v1/conversations') {
         response.end(JSON.stringify({ items: [{ id: 'c0', lastActivityAt: '2026-10-16T10:00:00.000Z' }],
           nextCursor: null }));
-      } else if (path === '/api/conversations/c0') {
+      } else if (path === '/api/v1/conversations/c0') {
         response.end(JSON.stringify({ id: 'c0', createdAt: '2026-10-16T10:00:00.000Z',
           lastActivityAt: '2026-10-16T10:00:00.000Z', turns: [{ id: 'old', text: 'un vecchio messaggio',
             acceptedAt: '2026-10-16T10:00:00.000Z', status: 'answered', answer: 'Archivio',
             finishedAt: '2026-10-16T10:00:01.000Z' }] }));
-      } else if (path === '/api/conversations/c1') {
+      } else if (path === '/api/v1/conversations/c1') {
         response.end(JSON.stringify({ id: 'c1', createdAt: '2026-10-16T10:00:00.000Z',
           lastActivityAt: '2026-10-16T10:00:00.000Z', turns: turns.map((turn, index) => ({ id: `t${index + 1}`,
             text: turn.text, acceptedAt: '2026-10-16T10:00:00.000Z', status: 'answered', answer: 'Risposta',
@@ -67,10 +67,10 @@ test('la chat resta aperta tra due turni e la barra laterale usa le anteprime HT
       () => `schermata iniziale; ${output.slice(-300)}`);
     assert.equal(fake.hellos.length, 0, 'the session opens with the first turn');
     child.stdin.write('ciao\r');
-    await until(() => turns.length === 1 && paths.includes('/api/conversations/c1'), () => 'primo turno');
+    await until(() => turns.length === 1 && paths.includes('/api/v1/conversations/c1'), () => 'primo turno');
     await until(() => output.includes('ciao'), () => 'anteprima della nuova chat');
     child.stdin.write('ancora\r');
-    await until(() => turns.length === 2 && paths.filter(path => path === '/api/conversations/c1').length === 2,
+    await until(() => turns.length === 2 && paths.filter(path => path === '/api/v1/conversations/c1').length === 2,
       () => 'secondo turno');
     assert.deepEqual(turns, [{ text: 'ciao' }, { text: 'ancora', conversationId: 'c1' }]);
     assert.equal(fake.hellos.length, 1, 'one session carries both turns');
@@ -79,7 +79,7 @@ test('la chat resta aperta tra due turni e la barra laterale usa le anteprime HT
     child.stdin.write('\u001b[B');
     await new Promise(resolve => setTimeout(resolve, 80));
     child.stdin.write('\r');
-    await until(() => paths.filter(path => path === '/api/conversations/c0').length >= 2,
+    await until(() => paths.filter(path => path === '/api/v1/conversations/c0').length >= 2,
       () => `apertura della chat scelta nella barra laterale; ${output.slice(-900)}`);
     assert.match(output, /Nuova chat/);
     assert.match(output, /un vecchio/);
@@ -156,13 +156,13 @@ test('la barra laterale carica altre chat e aggiorna dalla prima pagina', async 
     const path = request.url ?? '';
     paths.push(path);
     response.setHeader('Content-Type', 'application/json');
-    if (path.startsWith('/api/conversations/')) {
+    if (path.startsWith('/api/v1/conversations/')) {
       const id = path.split('/').at(-1);
       response.end(JSON.stringify({ id, createdAt: '2026-10-16T10:00:00.000Z',
         lastActivityAt: '2026-10-16T10:00:00.000Z', turns: [{ id: 't1', text: `messaggio ${id}`,
           acceptedAt: '2026-10-16T10:00:00.000Z', status: 'answered', answer: 'ok',
           finishedAt: '2026-10-16T10:00:01.000Z' }] }));
-    } else if (path === '/api/conversations?cursor=opaque') {
+    } else if (path === '/api/v1/conversations?cursor=opaque') {
       response.end(JSON.stringify({ items: [{ id: 'c2', lastActivityAt: '2026-10-16T09:00:00.000Z' }],
         nextCursor: null }));
     } else {
@@ -182,16 +182,16 @@ test('la barra laterale carica altre chat e aggiorna dalla prima pagina', async 
   try {
     await until(() => output.includes('messaggio c1'), () => 'prima pagina');
     child.stdin.write('\u000c');
-    await until(() => paths.includes('/api/conversations?cursor=opaque'), () => 'pagina successiva');
+    await until(() => paths.includes('/api/v1/conversations?cursor=opaque'), () => 'pagina successiva');
     await until(() => output.includes('messaggio c2'), () => 'anteprima seconda pagina');
     child.stdin.write('\u0012');
-    await until(() => paths.filter(path => path === '/api/conversations').length === 2,
+    await until(() => paths.filter(path => path === '/api/v1/conversations').length === 2,
       () => 'aggiornamento della prima pagina');
     child.stdin.write('\u0011');
     const [code] = await once(child, 'exit');
     assert.equal(code, 0);
-    assert.deepEqual(paths.filter(path => path.startsWith('/api/conversations?') || path === '/api/conversations'),
-      ['/api/conversations', '/api/conversations?cursor=opaque', '/api/conversations']);
+    assert.deepEqual(paths.filter(path => path.startsWith('/api/v1/conversations?') || path === '/api/v1/conversations'),
+      ['/api/v1/conversations', '/api/v1/conversations?cursor=opaque', '/api/v1/conversations']);
   } finally {
     child.kill();
     server.closeAllConnections();
@@ -204,7 +204,7 @@ test('una chat riaperta passa da in elaborazione a risposta dopo aggiornamento m
   let historyReads = 0;
   const fake = await startFakeBackend({ http(request, response) {
     response.setHeader('Content-Type', 'application/json');
-    if (request.url === '/api/conversations') {
+    if (request.url === '/api/v1/conversations') {
       response.end(JSON.stringify({ items: [{ id: 'c0', lastActivityAt: '2026-10-16T10:00:00.000Z' }],
         nextCursor: null }));
       return;

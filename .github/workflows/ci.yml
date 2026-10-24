@@ -17,6 +17,7 @@ jobs:
     timeout-minutes: 15
     env:
       BRANCH: ${{ github.head_ref || github.ref_name }}
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
       GITLEAKS_VERSION: 8.30.1
       GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
     steps:
@@ -48,22 +49,26 @@ jobs:
       - name: Check the model of the workspace
         run: workspace/ambrogio-model/scripts/model-checks --workspace workspace
 
+      # Corepack runs the pnpm version that package.json of each repository declares in packageManager.
+      - name: Enable Corepack
+        run: corepack enable
+
       - name: Install and build the side-by-side backend
         working-directory: workspace/ambrogio-backend
         shell: bash
         run: |
           set -euo pipefail
-          pnpm_version="$(node -p "require('./package.json').packageManager.replace(/^pnpm@/, '')")"
           git log -1 --format='ambrogio-backend %H'
-          npx --yes "pnpm@${pnpm_version}" install --frozen-lockfile
-          npx --yes "pnpm@${pnpm_version}" build
-
-      - name: Install pnpm
-        run: npm install --global pnpm@12.11.2
+          pnpm install --frozen-lockfile
+          pnpm build
 
       - name: Install dependencies
         working-directory: workspace/ambrogio-cli
         run: pnpm install --frozen-lockfile
+
+      - name: Audit dependencies
+        working-directory: workspace/ambrogio-cli
+        run: pnpm audit --audit-level high
 
       - name: Install gitleaks
         shell: bash

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { after, before, test } from 'node:test';
 import { once } from 'node:events';
-import { AmbrogioBackend, backendUrl, sessionUrl, textRejection } from '../src/backend.js';
+import { AmbrogioBackend, PublicHttpError, backendUrl, sessionUrl, textRejection } from '../src/backend.js';
 import { texts } from '../src/i18n.js';
 import { startFakeBackend } from './fake-backend.js';
 
@@ -134,11 +134,11 @@ test('elenco con cursore opaco e storico pending/answered', async () => {
   handler = (request, response) => {
     paths.push(request.url ?? '');
     response.setHeader('Content-Type', 'application/json');
-    if (request.url === '/api/conversations') {
+    if (request.url === '/api/v1/conversations') {
       response.end(JSON.stringify({ items: [{ id: 'c1', lastActivityAt: '2026-10-16T10:00:00.000Z' }], nextCursor: 'opaque' }));
-    } else if (request.url === '/api/conversations?cursor=opaque') {
+    } else if (request.url === '/api/v1/conversations?cursor=opaque') {
       response.end(JSON.stringify({ items: [], nextCursor: null }));
-    } else if (request.url === '/api/conversations/c1') {
+    } else if (request.url === '/api/v1/conversations/c1') {
       response.end(JSON.stringify({ id: 'c1', createdAt: '2026-10-16T10:00:00.000Z',
         lastActivityAt: '2026-10-16T10:00:00.000Z', turns: [
           { id: 't1', text: 'ciao', acceptedAt: '2026-10-16T10:00:00.000Z', status: 'pending' },
@@ -153,5 +153,43 @@ test('elenco con cursore opaco e storico pending/answered', async () => {
   assert.deepEqual((await backend.list(first.nextCursor ?? undefined)).items, []);
   const history = await backend.history('c1');
   assert.deepEqual(history.turns.map(turn => turn.status), ['pending', 'answered']);
-  assert.deepEqual(paths, ['/api/conversations', '/api/conversations?cursor=opaque', '/api/conversations/c1']);
+  assert.deepEqual(paths, ['/api/v1/conversations', '/api/v1/conversations?cursor=opaque', '/api/v1/conversations/c1']);
+});
+
+// Verification: Prova della presentazione degli errori HTTP nel client terminale
+test('errori HTTP interpretati soltanto dal type del Problem Details, nelle due lingue', async () => {
+  const replies: Record<string, { status: number; type: string; body: unknown }> = {
+    '/api/v1/conversations/missing': { status: 404, type: 'application/problem+json',
+      body: { type: '/problems/conversation-not-found', title: 'BACKEND_TITLE', status: 404, detail: 'BACKEND_DETAIL' } },
+    '/api/v1/conversations/unknown': { status: 409, type: 'application/problem+json; charset=utf-8',
+      body: { type: '/problems/something-new', title: 'BACKEND_TITLE', status: 409 } },
+    '/api/v1/conversations/fault': { status: 500, type: 'application/problem+json',
+      body: { type: 'about:blank', title: 'Internal Server Error', status: 500 } },
+    '/api/v1/conversations/plain': { status: 404, type: 'application/json',
+      body: { type: '/problems/conversation-not-found', error: 'BACKEND_ERROR' } },
+    '/api/v1/conversations': { status: 400, type: 'application/problem+json',
+      body: { type: '/problems/invalid-pagination', title: 'BACKEND_TITLE', status: 400 } },
+  };
+  handler = (request, response) => {
+    const reply = replies[request.url ?? '']!;
+    response.writeHead(reply.status, { 'Content-Type': reply.type }).end(JSON.stringify(reply.body));
+  };
+  const expected = {
+    it: { missing: 'Conversazione non trovata.', unknown: 'Errore HTTP 409.', fault: 'Errore HTTP 500.',
+      plain: 'Errore HTTP 404.', list: 'Errore HTTP 400.' },
+    en: { missing: 'Conversation not found.', unknown: 'HTTP error 409.', fault: 'HTTP error 500.',
+      plain: 'HTTP error 404.', list: 'HTTP error 400.' },
+  } as const;
+  for (const language of ['it', 'en'] as const) {
+    const backend = new AmbrogioBackend(base, identity, texts[language]);
+    for (const id of ['missing', 'unknown', 'fault', 'plain'] as const) {
+      await assert.rejects(backend.history(id), (error: Error) => {
+        assert.ok(error instanceof PublicHttpError);
+        assert.equal(error.message, expected[language][id]);
+        assert.doesNotMatch(error.message, /BACKEND_/);
+        return true;
+      });
+    }
+    await assert.rejects(backend.list(), { message: expected[language].list });
+  }
 });
