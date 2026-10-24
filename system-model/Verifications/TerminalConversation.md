@@ -138,6 +138,23 @@ La prova passa se la persona può conversare dal terminale, osserva i frammenti 
   * verify: [Uso delle sole interfacce pubbliche del backend nel client terminale](../Requirements/TerminalConversation.md#uso-delle-sole-interfacce-pubbliche-del-backend-nel-client-terminale)
 ---
 
+### Prova del client terminale compilato come processo
+
+Con `pnpm test`, avviare `dist/src/cli.js` con Node.js senza URL del backend; con `pnpm test:backend`, avviare `dist/src/cli.js` in un terminale contro l'ingresso di prova del backend affiancato e inviare un turno.
+
+#### Details
+La prova passa se senza URL il processo termina con codice 2 e l'indicazione dell'URL mancante su stderr, e se contro il backend affiancato il processo mostra la nuova chat e la risposta e termina con codice 0. Fallisce se il compilato non si avvia, se un codice di uscita differisce o se la conversazione non si completa.
+
+#### Metadata
+  * type: test-verification
+
+#### Relations
+  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
+  * satisfiedBy: [verify-backend.mjs](../../scripts/verify-backend.mjs)
+  * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
+  * verify: [Client terminale compilato provato come processo](../Requirements/TerminalConversation.md#client-terminale-compilato-provato-come-processo)
+---
+
 ### Prova del comando di verifica completo del client terminale
 
 Leggere lo script `verify` di `package.json` e i comandi del job `checks` di `.github/workflows/ci.yml`.
@@ -403,21 +420,4 @@ La prova passa se, durante l'elaborazione, il client mostra il testo del turno c
   * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
   * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
   * verify: [Stato del turno in elaborazione alla riapertura nel client terminale](../Requirements/TerminalConversation.md#stato-del-turno-in-elaborazione-alla-riapertura-nel-client-terminale)
----
-
-### Prova del client terminale compilato come processo
-
-Con `pnpm test`, avviare `dist/src/cli.js` con Node.js senza URL del backend; con `pnpm test:backend`, avviare `dist/src/cli.js` in un terminale contro l'ingresso di prova del backend affiancato e inviare un turno.
-
-#### Details
-La prova passa se senza URL il processo termina con codice 2 e l'indicazione dell'URL mancante su stderr, e se contro il backend affiancato il processo mostra la nuova chat e la risposta e termina con codice 0. Fallisce se il compilato non si avvia, se un codice di uscita differisce o se la conversazione non si completa.
-
-#### Metadata
-  * type: test-verification
-
-#### Relations
-  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
-  * satisfiedBy: [verify-backend.mjs](../../scripts/verify-backend.mjs)
-  * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
-  * verify: [Client terminale compilato provato come processo](../Requirements/TerminalConversation.md#client-terminale-compilato-provato-come-processo)
 ---

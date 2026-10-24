@@ -56,6 +56,23 @@ Ambrogio deve fornire alla famiglia un client di chat testuale utilizzabile dal 
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
+### Client terminale compilato provato come processo
+
+Le prove del client terminale devono avviare il client compilato `dist/src/cli.js` come processo, verificando un avvio rifiutato per l'URL del backend mancante e, contro il backend affiancato, una conversazione riuscita nella schermata del terminale.
+
+#### Details
+Le matrici dei casi della schermata e del protocollo restano nelle prove dei singoli confini.
+
+#### Metadata
+  * type: requirement
+
+#### Relations
+  * derivedFrom: [Artefatti compilati provati come processi](../../../ambrogio-model/system-model/Requirements/CodeArchitecture.md#artefatti-compilati-provati-come-processi)
+  * satisfiedBy: [verify-backend.mjs](../../scripts/verify-backend.mjs)
+  * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
+  * specify: [Architettura del codice](../../../ambrogio-model/system-model/Capabilities/Engineering.md#architettura-del-codice)
+---
+
 ### Comando di verifica completo del client terminale
 
 Il client terminale deve offrire il comando `pnpm verify`, che esegue in locale i controlli del job `Terminal client checks` nell'ordine del comando di verifica completo comune e termina con esito non riuscito al primo controllo fallito.
@@ -551,21 +568,4 @@ Quando il client è attivo in un terminale interattivo, deve mostrare l'elenco d
 #### Relations
   * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
----
-
-### Client terminale compilato provato come processo
-
-Le prove del client terminale devono avviare il client compilato `dist/src/cli.js` come processo, verificando un avvio rifiutato per l'URL del backend mancante e, contro il backend affiancato, una conversazione riuscita nella schermata del terminale.
-
-#### Details
-Le matrici dei casi della schermata e del protocollo restano nelle prove dei singoli confini.
-
-#### Metadata
-  * type: requirement
-
-#### Relations
-  * derivedFrom: [Artefatti compilati provati come processi](../../../ambrogio-model/system-model/Requirements/CodeArchitecture.md#artefatti-compilati-provati-come-processi)
-  * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
-  * satisfiedBy: [verify-backend.mjs](../../scripts/verify-backend.mjs)
-  * specify: [Architettura del codice](../../../ambrogio-model/system-model/Capabilities/Engineering.md#architettura-del-codice)
 ---
