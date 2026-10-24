@@ -416,6 +416,11 @@ Quando la persona aggiorna l'elenco delle conversazioni con il comando di aggior
 
 Il client terminale deve eseguire la scansione dei segreti dell'intera storia nel job `Gitleaks` del workflow `.github/workflows/secret-scan.yml`.
 
+#### Details
+Alternative: l'action ufficiale `gitleaks/gitleaks-action` (richiede una licenza quando il repository appartiene a un'organizzazione); il solo controllo in CI (scopre il segreto quando è già nella storia locale e pubblicata); il solo hook locale (dipende dall'attivazione in ogni clone e non protegge le modifiche che arrivano da altri ambienti).
+
+Motivo: l'hook locale insieme alla scansione in CI blocca il segreto prima del commit quando l'hook è attivo e lo rileva comunque al push; il binario fissato con impronta verificata non dipende da licenze né da action di terze parti oltre al checkout.
+
 #### Metadata
   * type: requirement
 
@@ -432,6 +437,11 @@ Il client terminale deve eseguire la scansione dei segreti dell'intera storia ne
 ### Scelta della lingua dell'interfaccia del client terminale
 
 All'avvio del client, il client deve stabilire come lingua dell'interfaccia l'italiano o l'inglese indicati con l'opzione di avvio o la variabile d'ambiente dedicate, con l'opzione che prevale sulla variabile; quando nessuna delle due indica la lingua, deve seguire la lingua del sistema; quando il valore indicato non è una lingua supportata, deve terminare l'avvio con un'indicazione d'uso.
+
+#### Details
+Alternative: un valore predefinito inglese, allineato al backend (chi usa un sistema in italiano riceve l'inglese senza configurazione); un valore predefinito italiano (chi usa un sistema in un'altra lingua riceve l'italiano senza configurazione).
+
+Motivo: seguire la lingua del sistema offre la lingua attesa senza configurazione, come la chat web segue la lingua del browser con l'inglese come ripiego; chi usa un sistema in una lingua diversa dall'italiano ottiene l'inglese anche con il backend configurato in italiano, finché non sceglie la lingua con l'opzione o la variabile.
 
 #### Metadata
   * type: requirement

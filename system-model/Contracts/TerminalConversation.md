@@ -148,9 +148,6 @@ Il client terminale applica il profilo comune dei workflow GitHub Actions ai wor
 
 Il client terminale applica il profilo comune di scansione dei segreti con gitleaks. Il job della scansione dell'intera storia in `.github/workflows/secret-scan.yml` si chiama `Gitleaks` e usa il checkout definito dal profilo di protezione dei workflow GitHub Actions del client. Il job `checks` di `.github/workflows/ci.yml` installa gitleaks prima di `pnpm test` con la stessa versione, lo stesso archivio, la stessa verifica dell'impronta e lo stesso script del workflow di scansione, così che la suite di test provi l'hook pre-commit e il comando di scansione della CI su repository Git temporanei.
 
-#### Alternative e conseguenze
-Sono state considerate l'action ufficiale `gitleaks/gitleaks-action`, che richiede una licenza quando il repository appartiene a un'organizzazione, il solo controllo in CI, che scopre il segreto quando è già nella storia locale e pubblicata, e il solo hook locale, che dipende dall'attivazione in ogni clone e non protegge le modifiche che arrivano da altri ambienti. La combinazione scelta blocca il segreto prima del commit quando l'hook è attivo e lo rileva comunque al push. Il binario fissato con impronta verificata non dipende da licenze né da action di terzi oltre al checkout.
-
 #### Metadata
   * type: specification
 
@@ -176,9 +173,6 @@ L'interfaccia del client è disponibile in italiano (`it`) e in inglese (`en`).
 La lingua si sceglie all'avvio con l'opzione `--language <it|en>` o con la variabile `AMBROGIO_LANGUAGE`; l'opzione prevale sulla variabile. Una variabile vuota equivale a una variabile assente. Un valore diverso da `it` o `en`, nell'opzione o nella variabile, è un'opzione non valida: l'avvio termina con codice `2`, il messaggio «Opzioni non valide.» e l'indicazione d'uso. Senza opzione né variabile, il client segue la lingua del sistema: considera il primo valore non vuoto fra `LC_ALL`, `LC_MESSAGES` e `LANG`; se inizia con `it` la lingua è l'italiano, altrimenti l'inglese, anche quando nessuna delle tre variabili è impostata o il valore è `C` o `POSIX`. La variabile GNU `LANGUAGE` non è considerata.
 
 Le indicazioni d'uso e i messaggi dell'avvio, compreso quello per una lingua non valida e la risposta a `--help`, usano la lingua stabilita senza il valore non valido: l'opzione o la variabile valide, altrimenti la lingua del sistema. La lingua resta la stessa per tutto il processo e non dipende dalla lingua configurata nel backend; i testi ricevuti dal backend sono mostrati così come arrivano.
-
-#### Alternative e conseguenze
-Sono state considerate un'opzione con valore predefinito inglese, allineato al backend, e un'opzione con valore predefinito italiano, che non cambiava il comportamento esistente. Seguire la lingua del sistema replica lo schema della chat web, che segue la lingua del browser con l'inglese come ripiego, e offre la lingua attesa senza configurazione; chi usa un sistema con lingua diversa dall'italiano ottiene l'inglese anche se il backend è configurato in italiano, finché non sceglie la lingua con l'opzione o la variabile.
 
 #### Metadata
   * type: specification
