@@ -231,11 +231,7 @@ class ConversationSession {
         return;
       }
       default:
-        // Server messages outside turns that ask for an action are not supported by this client.
-        if (string(message.id) && !message.type.startsWith('session.') && !message.type.startsWith('output.')
-          && !message.type.startsWith('turn.')) {
-          this.write({ type: 'client.result', id: message.id, ok: false, reason: 'unsupported' });
-        }
+        // A server message of an unknown type is ignored.
     }
   }
 

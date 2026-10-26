@@ -124,8 +124,8 @@ test('controlli locali del testo ed estensioni non supportate', async () => {
     assert.equal(fake.hellos.length, 0);
     assert.equal((await backend.send('ciao', null, () => {})).status, 'answered');
     await new Promise(resolve => setTimeout(resolve, 20));
-    assert.deepEqual(fake.messages.filter(message => message.type === 'client.result'),
-      [{ type: 'client.result', id: 'action-1', ok: false, reason: 'unsupported' }]);
+    // Server messages of an unknown type are ignored without an answer.
+    assert.deepEqual(fake.messages.filter(message => message.type === 'client.result'), []);
   } finally { await backend.close(); await fake.close(); }
 });
 
