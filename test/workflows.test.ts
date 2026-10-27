@@ -191,6 +191,19 @@ test('ci.yml activates pnpm with Corepack, installs the frozen dependencies, aud
   assert(install >= 0 && install < order[7]!, 'gitleaks is installed before the tests');
 });
 
+test('ci.yml provides the PostgreSQL test server to the integration proof', () => {
+  const job = children(block(workflows['ci.yml'], 'jobs'), 2).checks ?? '';
+  const postgres = block(block(job, 'services', 4), 'postgres', 6);
+  assert.match(postgres, /^ {8}image: pgvector\/pgvector:pg18$/m);
+  assert.match(block(postgres, 'env', 8), /^ {10}POSTGRES_HOST_AUTH_METHOD: trust$/m);
+  assert.match(block(postgres, 'ports', 8), /^ {10}- 5432:5432$/m);
+  assert.match(postgres, /--health-cmd "pg_isready/);
+  assert.match(block(job, 'env', 4), /^ {6}AMBROGIO_TEST_DATABASE_URL: postgres:\/\/postgres@127\.0\.0\.1:5432\/postgres$/m);
+  const script = read('scripts/verify-backend.mjs');
+  assert.match(script, /process\.env\.AMBROGIO_TEST_DATABASE_URL/);
+  assert.match(script, /startTestServer\(\{ databaseUrl,/);
+});
+
 test('the dependency audit ignores no advisory except single GHSA identifiers recorded in pnpm-workspace.yaml', () => {
   for (const audit of Object.values(workflows).flatMap(text => text.match(/pnpm audit.*/g) ?? [])) {
     assert.equal(audit, 'pnpm audit --audit-level high');
