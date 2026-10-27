@@ -83,7 +83,7 @@ pnpm verify             # every CI check in order: model checks, frozen install,
 
 CI activates pnpm with Corepack at the version in `packageManager` and fails on high or critical advisories reported by `pnpm audit`.
 
-`pnpm test:backend` expects a built checkout of `ambrogio-backend` at `../ambrogio-backend` or at the path in `AMBROGIO_BACKEND_REPO`. It runs the backend in the same process.
+`pnpm test:backend` expects a built checkout of `ambrogio-backend` at `../ambrogio-backend` or at the path in `AMBROGIO_BACKEND_REPO`. It runs the backend in the same process. It also needs a PostgreSQL test server, where the backend creates and drops its own database: run `../ambrogio-model/scripts/test-postgres start` (Docker required) and export the `AMBROGIO_TEST_DATABASE_URL=...` line it prints; `pnpm verify` needs it too.
 
 Dependencies are pinned to exact versions in `package.json` and resolved in `pnpm-lock.yaml`. `pnpm-workspace.yaml` allows no dependency build scripts, and pnpm's default minimum release age for new versions stays on.
 

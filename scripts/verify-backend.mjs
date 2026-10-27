@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const cli = fileURLToPath(new URL('..', import.meta.url));
 const root = resolve(process.env.AMBROGIO_BACKEND_REPO ?? resolve(cli, '../ambrogio-backend'));
 // The backend checked out side by side is used as it is: the commit is printed as evidence, not checked.
+// The test entry creates and drops its own archive database on this PostgreSQL test server.
+const databaseUrl = process.env.AMBROGIO_TEST_DATABASE_URL;
+if (!databaseUrl) throw new Error('Missing environment variable AMBROGIO_TEST_DATABASE_URL: start the PostgreSQL test server with ../ambrogio-model/scripts/test-postgres start and export the line it prints');
 const commit = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 process.stdout.write(`ambrogio-backend commit ${commit}\n`);
 // The public test entry point is the only backend module this test imports.
@@ -19,14 +20,13 @@ const identity = { clientId: 'cli-verifica', name: 'Terminale verifica' };
 const text = value => ({ kind: 'text', text: value });
 const expectation = expectsReply => ({ kind: 'reply_expectation', expectsReply });
 
-const directory = await mkdtemp(join(tmpdir(), 'ambrogio-cli-backend-'));
 let runtime;
 let child;
 let releaseSlow = () => {};
 const slowReply = new Promise(resolve => { releaseSlow = resolve; });
 const neverReply = new Promise(() => {});
 try {
-  runtime = await startTestServer({ directory, language: 'it', reply: { async *produce(history) {
+  runtime = await startTestServer({ databaseUrl, language: 'it', reply: { async *produce(history) {
     const last = history.turns.at(-1)?.text;
     if (last === 'errore') { yield text('parziale'); throw new Error('guasto controllato'); }
     if (last === 'lento') { yield text('Inizio '); await slowReply; yield text('fine'); yield expectation(false); return; }
@@ -132,5 +132,4 @@ try {
   releaseSlow();
   if (child?.exitCode === null) child.kill();
   if (runtime) await runtime.close();
-  await rm(directory, { recursive: true, force: true });
 }
