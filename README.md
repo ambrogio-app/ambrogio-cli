@@ -7,7 +7,9 @@
 
 # Ambrogio — terminal client
 
-**Ambrogio** is an open source home assistant that you host yourself. This repository is its **terminal chat client**: a full-screen text interface for talking to an Ambrogio backend from any terminal.
+**Ambrogio**: talk to it like Alexa, chat with it like ChatGPT — one self-hosted AI assistant for your whole homelab. Multi-agent by design: each agent you configure handles one job, such as the house, music, weather or your documents, using the services you already host.
+
+This repository is its **terminal chat client**: a full-screen text interface for talking to an Ambrogio backend from any terminal.
 
 | Repository | Role |
 |---|---|
