@@ -526,6 +526,27 @@ Mentre il client è attivo, il client deve presentare nella lingua dell'interfac
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
 
+### Un solo turno alla volta per conversazione nel client terminale
+
+Quando il client terminale ha inviato un turno di una chat, deve disabilitare il campo di scrittura di quella chat e non inviare altri turni da essa finché non riceve l'esito del turno, consentendo nel frattempo di aprire un'altra conversazione o la nuova chat e di inviarvi un turno.
+
+#### Details
+Il client raffina la regola del protocollo per i client con lo stato di ciascuna chat: un turno inviato tiene occupata soltanto la propria chat, riconosciuta dalla conversazione indicata in `turn.accepted`, e la sessione `ambrogio.v1` unica del processo porta in parallelo i turni di conversazioni diverse. Quando la chat è mostrata all'esito, il campo resta disabilitato anche durante la rilettura dello storico aggiornato. La presentazione nella schermata segue «Schermata conversazionale a due pannelli».
+
+#### Metadata
+  * type: requirement
+
+#### Contract References
+  * [Esiti del turno nel protocollo Ambrogio v1](../../../ambrogio-backend/system-model/Contracts/ConversationProtocol.md#esiti-del-turno-nel-protocollo-ambrogio-v1)
+  * [Schermata conversazionale a due pannelli](../Contracts/TerminalConversation.md#schermata-conversazionale-a-due-pannelli)
+
+#### Relations
+  * derivedFrom: [Disabilitazione degli ingressi durante un turno](../../../ambrogio-backend/system-model/Requirements/FamilyConversation.md#disabilitazione-degli-ingressi-durante-un-turno)
+  * satisfiedBy: [backend.ts](../../src/backend.ts)
+  * satisfiedBy: [tui.ts](../../src/tui.ts)
+  * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
+---
+
 ### Uso delle sole interfacce pubbliche del backend nel client terminale
 
 Quando il client terminale comunica con il backend, deve usare soltanto il protocollo `ambrogio.v1` e le API HTTP pubbliche definite dai contratti del backend, e il suo codice di produzione non deve importare codice del backend.
@@ -579,3 +600,4 @@ Quando il client è attivo in un terminale interattivo, deve mostrare l'elenco d
   * satisfiedBy: [tui.ts](../../src/tui.ts)
   * specify: [Conversazione testuale nel terminale](../Capabilities/TerminalConversation.md#conversazione-testuale-nel-terminale)
 ---
+

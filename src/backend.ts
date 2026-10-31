@@ -31,6 +31,7 @@ type PendingTurn = {
   answer: string;
   streams: Set<number>;
   onDelta: (delta: string) => void;
+  onAccepted: (conversationId: string) => void;
   settle: (result: TurnResult) => void;
 };
 
@@ -148,11 +149,12 @@ class ConversationSession {
     return session;
   }
 
-  send(text: string, conversationId: string | null, onDelta: (delta: string) => void): Promise<TurnResult> {
+  send(text: string, conversationId: string | null, onDelta: (delta: string) => void,
+    onAccepted: (conversationId: string) => void): Promise<TurnResult> {
     const requestId = randomUUID();
     const stream = this.nextStream++;
     return new Promise<TurnResult>(resolve => {
-      this.turns.set(requestId, { conversationId, answer: '', streams: new Set(), onDelta,
+      this.turns.set(requestId, { conversationId, answer: '', streams: new Set(), onDelta, onAccepted,
         settle: result => { this.turns.delete(requestId); resolve(result); } });
       this.write({ type: 'input.start', requestId, stream, content: { type: 'text' }, reply: 'text',
         ...(conversationId ? { conversationId } : {}) });
@@ -181,6 +183,7 @@ class ConversationSession {
         if (turn && string(message.conversationId) && string(message.turnId)) {
           turn.conversationId = message.conversationId;
           turn.turnId = message.turnId;
+          turn.onAccepted(message.conversationId);
         }
         return;
       }
@@ -298,7 +301,12 @@ export class AmbrogioBackend {
     return { id: body.id, createdAt: body.createdAt, lastActivityAt: body.lastActivityAt, turns };
   }
 
-  async send(text: string, conversationId: string | null, onDelta: (delta: string) => void): Promise<TurnResult> {
+  /**
+   * Send a text turn on the session; `onAccepted` receives the conversation of the turn when the backend
+   * accepts it, before the outcome.
+   */
+  async send(text: string, conversationId: string | null, onDelta: (delta: string) => void,
+    onAccepted: (conversationId: string) => void = () => {}): Promise<TurnResult> {
     const rejection = textRejection(text, this.texts);
     if (rejection) throw new Error(rejection);
     let session = await this.session?.catch(() => undefined);
@@ -306,6 +314,6 @@ export class AmbrogioBackend {
       this.session = ConversationSession.open(sessionUrl(this.base), this.identity, this.texts);
       session = await this.session;
     }
-    return session.send(text, conversationId, onDelta);
+    return session.send(text, conversationId, onDelta, onAccepted);
   }
 }

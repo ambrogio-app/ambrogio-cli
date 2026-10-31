@@ -267,5 +267,5 @@ test('secret-scan.yml scans the whole history with a verified gitleaks and redac
   assert(strict < download && download < verify && verify < extract && extract < path,
     'the checksum is verified after the download and before the extraction');
   const scanStep = steps(job).at(-1) ?? '';
-  assert.match(scanStep, /^ {8}run: gitleaks git --redact --no-banner --exit-code 1 \.$/m);
+  assert.match(scanStep, /^ {8}run: gitleaks git --redact --no-banner --ignore-gitleaks-allow --exit-code 1 \.$/m);
 });
