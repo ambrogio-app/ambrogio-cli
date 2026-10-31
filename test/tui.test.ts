@@ -5,7 +5,8 @@ import { startFakeBackend } from './fake-backend.js';
 import { keys, startTerminal, type Screen } from './terminal.js';
 
 // Verifications: Prova della schermata conversazionale persistente;
-// Prova della ripartenza dell'elenco aggiornato; Prova del rifiuto locale del turno testuale nel client terminale.
+// Prova della ripartenza dell'elenco aggiornato; Prova del rifiuto locale del turno testuale nel client terminale;
+// Prova di un solo turno alla volta per conversazione nel client terminale.
 const executable = new URL('../src/cli.js', import.meta.url).pathname;
 const environment = { ...process.env, AMBROGIO_LANGUAGE: 'it' };
 const at = '2026-10-16T10:00:00.000Z';
@@ -205,6 +206,69 @@ test('l’aggiornamento presenta l’ordine corrente dell’archivio e prosegue 
     terminal.write(keys.more);
     await shown('Nuova chat|messaggio c3|messaggio c2|messaggio c1');
     assert.deepEqual(lists, ['', '?cursor=p1', '', '?cursor=p2']);
+    assert.equal(await terminal.quit(), 0);
+  } finally {
+    terminal.dispose();
+    await fake.close();
+  }
+});
+
+test('durante un turno la sua chat non invia altri turni, mentre una nuova chat invia il proprio', async () => {
+  const turns: Array<{ text: string; conversationId?: string }> = [];
+  let releaseFirst: (() => void) | undefined;
+  const fake = await startFakeBackend({
+    onTurn(turn) {
+      turns.push({ text: turn.text, ...(turn.conversationId ? { conversationId: turn.conversationId } : {}) });
+      const turnId = `t${turns.length}`;
+      if (turn.text === 'primo') {
+        turn.accept('c1', turnId);
+        turn.transmit(['Parziale']);
+        releaseFirst = () => turn.send({ type: 'turn.completed', turnId, expectsReply: false });
+        return;
+      }
+      turn.accept(turn.conversationId ?? 'c2', turnId);
+      turn.transmit(['Risposta']);
+      turn.send({ type: 'turn.completed', turnId, expectsReply: false });
+    },
+    http(request, response) {
+      const id = request.url?.split('/').at(-1);
+      if (request.url === '/api/v1/conversations') json(response, { items: [], nextCursor: null });
+      else if (id === 'c1' || id === 'c2') {
+        json(response, conversation(id, turns.filter(turn => (turn.conversationId ?? (turn.text === 'primo' ? 'c1' : 'c2')) === id)
+          .map(turn => turn.text)));
+      } else problem(response, '/problems/conversation-not-found', 'Conversation not found', 404);
+    },
+  });
+  const terminal = await startTerminal(executable, ['--server', fake.url], { cols: 100, rows: 30, env: environment });
+  const settle = () => new Promise(resolve => setTimeout(resolve, 400));
+  try {
+    await terminal.waitFor(screen => twoPanels(screen) && sidebar(screen)[0] === 'Nuova chat', 'schermata iniziale');
+    terminal.write('primo\r');
+    await terminal.waitFor(screen => screen.text().includes('Ambrogio: Parziale'), 'risposta in corso');
+    terminal.write('secondo\r');
+    await settle();
+    assert.equal(fake.starts().length, 1, 'no turn leaves the chat whose turn is in progress');
+
+    terminal.write('\u000e');
+    await terminal.waitFor(screen => sidebar(screen).join('|') === 'Nuova chat|primo', 'nuova chat durante il turno');
+    terminal.write('altra\r');
+    await terminal.waitFor(screen => screen.text().includes('Tu: altra') && screen.text().includes('Risposta conservata.'),
+      'turno della nuova chat');
+    assert.deepEqual(turns, [{ text: 'primo' }, { text: 'altra' }]);
+
+    await terminal.keys(keys.tab, keys.down, keys.enter);
+    await terminal.waitFor(screen => screen.text().includes('Ambrogio: Parziale'), 'ritorno alla chat in risposta');
+    terminal.write('terzo\r');
+    await settle();
+    assert.equal(fake.starts().length, 2, 'the chat whose turn is in progress still sends nothing');
+
+    releaseFirst?.();
+    await terminal.waitFor(screen => screen.text().includes('Ambrogio: Risposta')
+      && screen.text().includes('Risposta conservata.'), 'esito del primo turno');
+    // The text written during the turn stays in the field and leaves with the next Enter.
+    terminal.write('\r');
+    await terminal.waitFor(() => turns.length === 3, 'turno dopo l’esito');
+    assert.deepEqual(turns[2], { text: 'terzo', conversationId: 'c1' });
     assert.equal(await terminal.quit(), 0);
   } finally {
     terminal.dispose();

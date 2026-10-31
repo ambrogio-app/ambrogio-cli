@@ -103,7 +103,7 @@ L'ispezione passa se le istruzioni rimandano a `ambrogio-model/AGENTS.md` per le
 In una cartella temporanea con un repository Git che usa una copia dell'hook `.githooks/pre-commit` del client e, accanto, un finto `ambrogio-model/scripts/model-checks` che registra la propria esecuzione e termina con un esito scelto dalla prova, tentare un commit privo di segreti con lo script che riesce, poi con lo script che fallisce; ripetere senza `ambrogio-model` affiancato e con un file che contiene un token fittizio.
 
 #### Details
-La prova passa se con lo script che riesce il commit è creato e lo script è stato eseguito; se con lo script che fallisce il commit è rifiutato e l'output riporta il messaggio dello script; se senza `ambrogio-model` affiancato il commit è rifiutato con il messaggio del contratto comune che indica di clonare `ambrogio-model` accanto al repository; e se il commit con il token è rifiutato senza eseguire lo script. Fallisce se uno di questi esiti differisce. Lo script finto sostituisce i controlli reali del modello, provati da «Prova dei controlli del modello dello spazio di lavoro», così che la suite resti veloce.
+La prova passa se con lo script che riesce il commit è creato e lo script è stato eseguito con gli argomenti `--staged`, la radice del repository e il percorso assoluto del suo file indice; se con lo script che fallisce il commit è rifiutato e l'output riporta il messaggio dello script; se senza `ambrogio-model` affiancato il commit è rifiutato con il messaggio del contratto comune che indica di clonare `ambrogio-model` accanto al repository; e se il commit con il token è rifiutato senza eseguire lo script. Fallisce se uno di questi esiti differisce. Lo script finto sostituisce i controlli reali del modello, provati da «Prova dei controlli del modello dello spazio di lavoro», così che la suite resti veloce.
 
 #### Metadata
   * type: test-verification
@@ -222,10 +222,10 @@ La prova passa se il job `checks` esegue `pnpm audit --audit-level high` nella c
 
 ### Prova dell'hook pre-commit dei segreti del client terminale
 
-In un repository Git temporaneo con `core.hooksPath` rivolto alla cartella `.githooks` del client, mettere in staging un file con un token fittizio riconosciuto da gitleaks, generato durante la prova, e tentare il commit; ripetere con un file privo di segreti e con un `PATH` che non contiene `gitleaks`.
+In un repository Git temporaneo con `core.hooksPath` rivolto alla cartella `.githooks` del client, mettere in staging un file con un token fittizio riconosciuto da gitleaks, generato durante la prova, e tentare il commit; ripetere con lo stesso token seguito da un commento `gitleaks:allow`, con un file privo di segreti, con un `PATH` che non contiene `gitleaks` e con un `PATH` in cui `gitleaks` riporta una versione diversa da 8.30.1.
 
 #### Details
-La prova passa se il commit con il token fittizio viene rifiutato senza che l'output ne riporti il valore, il commit senza segreti riesce e, senza `gitleaks` nel `PATH`, il commit viene rifiutato con il messaggio che indica di installare gitleaks 8.30.1. Il repository temporaneo viene eliminato dopo la prova. Fallisce se il commit con il token fittizio viene creato, se l'output riporta il valore del token, se il commit senza segreti viene rifiutato o se senza gitleaks il commit viene creato o il messaggio non indica come installarlo. La prova richiede gitleaks nel `PATH`, che il job `checks` della CI installa.
+La prova passa se il commit con il token fittizio viene rifiutato senza che l'output ne riporti il valore, anche quando il token è seguito da un commento `gitleaks:allow`; il commit senza segreti riesce; senza `gitleaks` nel `PATH`, o con un `gitleaks` di versione diversa da 8.30.1, il commit viene rifiutato con il messaggio che indica la versione richiesta e dove installarla. Il repository temporaneo viene eliminato dopo la prova. Fallisce se il commit con il token fittizio viene creato, con o senza commento `gitleaks:allow`, se l'output riporta il valore del token, se il commit senza segreti viene rifiutato o se senza gitleaks, o con una versione diversa, il commit viene creato o il messaggio non indica come installare la versione richiesta. La prova richiede gitleaks nel `PATH`, che il job `checks` della CI installa.
 
 #### Metadata
   * type: test-verification
@@ -289,7 +289,7 @@ La prova passa se il workflow dichiara i trigger `push` sul branch `main`, `pull
 Leggere `.github/workflows/secret-scan.yml` come testo e confrontarlo con il profilo di scansione dei segreti; eseguire il comando di scansione del workflow con gitleaks su un repository Git temporaneo che contiene in un commit un token fittizio generato durante la prova, e su uno che non contiene segreti.
 
 #### Details
-La prova passa se il workflow dichiara i trigger `push` su qualunque branch, `pull_request`, `workflow_dispatch` e `workflow_call`; esegue il checkout fissato con `fetch-depth: 0` e `persist-credentials: false`; con `set -euo pipefail` scarica dalla release ufficiale l'archivio della versione indicata dal contratto, ne verifica con `sha256sum --check --strict` l'impronta del contratto prima di estrarlo e aggiunge il binario al `PATH`; esegue `gitleaks git --redact --no-banner --exit-code 1 .`; e quel comando termina con esito non riuscito sul repository con il token fittizio, senza riportarne il valore, e con esito riuscito sul repository senza segreti. Fallisce se manca un trigger o una di queste fasi, se la verifica dell'impronta segue l'estrazione, se versione o impronta differiscono dal contratto, se il comando non fallisce in presenza del token o se l'output ne riporta il valore.
+La prova passa se il workflow dichiara i trigger `push` su qualunque branch, `pull_request`, `workflow_dispatch` e `workflow_call`; esegue il checkout fissato con `fetch-depth: 0` e `persist-credentials: false`; con `set -euo pipefail` scarica dalla release ufficiale l'archivio della versione indicata dal contratto, ne verifica con `sha256sum --check --strict` l'impronta del contratto prima di estrarlo e aggiunge il binario al `PATH`; esegue `gitleaks git --redact --no-banner --ignore-gitleaks-allow --exit-code 1 .`; e quel comando termina con esito non riuscito sul repository con il token fittizio, senza riportarne il valore, anche quando il token è seguito da un commento `gitleaks:allow`, e con esito riuscito sul repository senza segreti. Fallisce se manca un trigger o una di queste fasi, se la verifica dell'impronta segue l'estrazione, se versione o impronta differiscono dal contratto, se il comando non fallisce in presenza del token o se l'output ne riporta il valore.
 
 #### Metadata
   * type: test-verification
@@ -421,3 +421,20 @@ La prova passa se, durante l'elaborazione, il client mostra il testo del turno c
   * satisfiedBy: [cli.test.ts](../../test/cli.test.ts)
   * verify: [Stato del turno in elaborazione alla riapertura nel client terminale](../Requirements/TerminalConversation.md#stato-del-turno-in-elaborazione-alla-riapertura-nel-client-terminale)
 ---
+
+### Prova di un solo turno alla volta per conversazione nel client terminale
+
+Nel terminale virtuale della suite, con il backend simulato locale, inviare un turno nella nuova chat e trattenerne l'esito dopo una risposta parziale; scrivere un altro testo e premere `Invio`; aprire con `Ctrl+N` la nuova chat e inviarvi un turno; tornare dalla barra laterale alla chat in risposta, scrivere un testo e premere `Invio`; poi concludere il primo turno e premere di nuovo `Invio`.
+
+#### Details
+La prova passa se, finché il primo turno attende l'esito, nessun altro turno parte dalla sua chat, né prima né dopo il ritorno a quella chat, che mostra la risposta parziale; il turno della nuova chat parte senza conversazione e riceve la propria risposta mentre il primo è ancora in corso; dopo l'esito del primo turno, il testo rimasto nel campo parte con `Invio` nella conversazione del primo turno. Fallisce se un turno parte dalla chat in risposta prima dell'esito, se la nuova chat non può inviare durante il turno o se il testo dopo l'esito non parte nella stessa conversazione.
+
+#### Metadata
+  * type: test-verification
+
+#### Relations
+  * derivedFrom: [Verifica del client terminale](#verifica-del-client-terminale)
+  * satisfiedBy: [tui.test.ts](../../test/tui.test.ts)
+  * verify: [Un solo turno alla volta per conversazione nel client terminale](../Requirements/TerminalConversation.md#un-solo-turno-alla-volta-per-conversazione-nel-client-terminale)
+---
+

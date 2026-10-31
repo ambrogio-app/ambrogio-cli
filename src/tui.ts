@@ -8,6 +8,12 @@ const term = terminalKit.terminal;
 
 type Entry = { id: string; label: string };
 type LocalTurn = { text: string; answer: string; status: 'streaming' | 'answered' | 'failed' | 'interrupted' };
+/**
+ * A chat as the right panel shows it. While `sending`, a turn of this chat waits for its outcome and the
+ * chat accepts no other turn; the person can still move to another chat and send there.
+ */
+type ChatView = { id: string | null; label: string; history: Conversation | null; localTurn: LocalTurn | null;
+  sending: boolean };
 
 function label(value: string, width = 52): string {
   const clean = value.replace(/[\x00-\x1f\x7f-\x9f]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -19,12 +25,11 @@ function errorText(value: unknown): string { return value instanceof Error ? val
 export async function runTerminalChat(url: URL, identity: ClientIdentity, t: Texts): Promise<void> {
   const backend = new AmbrogioBackend(url, identity, t);
   const entries: Entry[] = [];
-  let currentId: string | null = null;
-  let currentLabel = t.newChat;
-  let history: Conversation | null = null;
-  let localTurn: LocalTurn | null = null;
+  const draft = (): ChatView => ({ id: null, label: t.newChat, history: null, localTurn: null, sending: false });
+  let view = draft();
+  /** The chats with a turn waiting for its outcome, the current one included. */
+  const sending = new Set<ChatView>();
   let nextCursor: string | null = null;
-  let busy = false;
   let closed = false;
   let status = t.loading;
   let doc: any;
@@ -39,12 +44,13 @@ export async function runTerminalChat(url: URL, identity: ClientIdentity, t: Tex
   const done = new Promise<void>(resolve => { finish = resolve; });
 
   function visibleEntries(): Entry[] {
-    return [{ id: currentId ?? '__draft', label: currentLabel },
-      ...entries.filter(entry => entry.id !== currentId)];
+    return [{ id: view.id ?? '__draft', label: view.label },
+      ...entries.filter(entry => entry.id !== view.id)];
   }
 
   function conversationText(): string {
     const lines: string[] = [];
+    const { history, localTurn } = view;
     for (const turn of history?.turns ?? []) {
       lines.push(t.you(turn.text));
       switch (turn.status) {
@@ -86,7 +92,7 @@ export async function runTerminalChat(url: URL, identity: ClientIdentity, t: Tex
       buttonFocusAttr: { color: 'black', bgColor: 'cyan', bold: true },
     });
     menu.on('submit', (id: string) => { void openChat(id); });
-    if (keepFocus) menu.focusValue(selected ?? currentId ?? '__draft');
+    if (keepFocus) menu.focusValue(selected ?? view.id ?? '__draft');
   }
 
   function onKey(key: string): void {
@@ -94,12 +100,12 @@ export async function runTerminalChat(url: URL, identity: ClientIdentity, t: Tex
     else if (key === 'TAB') {
       const inMenu = Boolean(menu && doc?.focusElement && menu.isAncestorOf(doc.focusElement));
       if (inMenu) doc.giveFocusTo(input);
-      else menu?.focusValue(currentId ?? '__draft');
+      else menu?.focusValue(view.id ?? '__draft');
     }
     else if (key === 'CTRL_N') newChat();
     else if (key === 'CTRL_R') {
       void loadList(false);
-      if (currentId) void openChat(currentId);
+      if (view.id) void openChat(view.id);
     }
     else if (key === 'CTRL_L' && nextCursor) void loadList(true);
   }
@@ -126,7 +132,7 @@ export async function runTerminalChat(url: URL, identity: ClientIdentity, t: Tex
     new kit.TextBox({ parent: doc, x: side, y: 0, width: 1, height: term.height - 1,
       content: Array(term.height).fill('│').join('\n'), textAttr: { color: 'gray' } });
     header = new kit.TextBox({ parent: doc, x: right, y: 0, width: rightWidth, height: 1,
-      content: label(currentLabel, rightWidth), textAttr: { color: 'cyan', bold: true } });
+      content: label(view.label, rightWidth), textAttr: { color: 'cyan', bold: true } });
     statusBox = new kit.TextBox({ parent: doc, x: right, y: 1, width: rightWidth,
       height: 1, content: ` ${status}`, textAttr: { color: 'gray' } });
     chat = new kit.TextBox({ parent: doc, x: right, y: 3, width: rightWidth,
@@ -139,6 +145,7 @@ export async function runTerminalChat(url: URL, identity: ClientIdentity, t: Tex
       width: rightWidth, value, placeholder: t.inputPlaceholder, noEmpty: false,
       keyBindings: { ...kit.InlineInput.prototype.keyBindings, TAB: undefined, CTRL_R: undefined },
     });
+    input.disabled = view.sending;
     input.on('submit', (text: string) => { void send(text); });
     new kit.TextBox({ parent: doc, x: 1, y: term.height - 3, width: side - 2,
       height: 1, content: t.sideKeys,
@@ -161,14 +168,14 @@ export async function runTerminalChat(url: URL, identity: ClientIdentity, t: Tex
         catch { /* An unavailable history keeps the selectable ID fallback. */ }
         const entry = entries.find(entry => entry.id === item.id);
         if (entry) entry.label = text;
-        if (currentId === item.id && currentLabel === item.id.slice(0, 8)) currentLabel = text;
+        if (view.id === item.id && view.label === item.id.slice(0, 8)) view.label = text;
         renderMenu();
       }
     }));
   }
 
   async function loadList(more = false): Promise<void> {
-    if (busy || closed) return;
+    if (closed) return;
     try {
       const page = await backend.list(more ? nextCursor ?? undefined : undefined);
       if (!more) entries.length = 0;
@@ -184,73 +191,91 @@ export async function runTerminalChat(url: URL, identity: ClientIdentity, t: Tex
   }
 
   async function openChat(id: string): Promise<void> {
-    if (busy || closed) return;
+    if (closed) return;
     if (id === '__draft') { newChat(); return; }
+    // A chat whose turn is still being answered is shown as it is, with its input disabled.
+    const answering = [...sending].find(chat => chat.id === id);
+    if (answering) {
+      view = answering;
+      status = t.answering;
+      buildScreen('', true);
+      return;
+    }
     try {
       const detail = await backend.history(id);
-      currentId = id;
-      currentLabel = label(detail.turns[0]?.text ?? id.slice(0, 8));
-      history = detail;
-      localTurn = null;
+      if (closed) return;
+      view = { id, label: label(detail.turns[0]?.text ?? id.slice(0, 8)), history: detail, localTurn: null,
+        sending: false };
       status = t.chatOpened;
       buildScreen('', true);
     } catch (error) { status = t.openError(errorText(error)); renderStatus(); }
   }
 
   function newChat(): void {
-    if (busy) return;
-    currentId = null;
-    currentLabel = t.newChat;
-    history = null;
-    localTurn = null;
+    view = draft();
     status = t.newChatReady;
     buildScreen('', true);
   }
 
+  /** Records the conversation of a chat in the sidebar list, keeping the chat's label. */
+  function remember(chat: ChatView, id: string): void {
+    chat.id = id;
+    const known = entries.find(entry => entry.id === id);
+    if (known) known.label = chat.label;
+    else entries.unshift({ id, label: chat.label });
+  }
+
   async function send(text: string): Promise<void> {
-    if (busy || closed) return;
+    const chat = view;
+    // One turn at a time per chat: while a turn of this chat waits for its outcome, nothing else is sent.
+    if (chat.sending || closed) return;
     // A text that cannot be sent stays in the input field; the status line shows why.
     const rejection = textRejection(text, t);
     if (rejection) { status = rejection; renderStatus(); return; }
-    const target = currentId;
-    busy = true;
+    const target = chat.id;
+    chat.sending = true;
+    sending.add(chat);
     input?.setValue('');
-    input.disabled = true;
-    if (!target) currentLabel = label(text);
-    header?.setContent(label(currentLabel, term.width - side - 4));
-    localTurn = { text, answer: '', status: 'streaming' };
+    if (input) input.disabled = true;
+    if (!target) chat.label = label(text);
+    header?.setContent(label(chat.label, term.width - side - 4));
+    chat.localTurn = { text, answer: '', status: 'streaming' };
     status = t.answering;
     renderMenu(); renderChat(); renderStatus();
+    // The person can move to another chat while this one is answered: only the shown chat is drawn.
+    const shown = () => chat === view && !closed;
     try {
       const result: TurnResult = await backend.send(text, target, delta => {
-        if (localTurn) localTurn.answer += delta;
-        renderChat();
-      });
-      if (result.conversationId) {
-        currentId = result.conversationId;
-        const known = entries.find(entry => entry.id === currentId);
-        if (known) known.label = currentLabel;
-        else entries.unshift({ id: currentId, label: currentLabel });
+        if (chat.localTurn) chat.localTurn.answer += delta;
+        if (shown()) renderChat();
+      }, id => { remember(chat, id); if (!closed) renderMenu(); });
+      if (result.conversationId) remember(chat, result.conversationId);
+      if (chat.localTurn) {
+        chat.localTurn.status = result.status;
+        chat.localTurn.answer = result.status === 'interrupted' ? '' : result.status === 'answered' ? result.answer : result.error;
       }
-      if (localTurn) {
-        localTurn.status = result.status;
-        localTurn.answer = result.status === 'interrupted' ? '' : result.status === 'answered' ? result.answer : result.error;
+      if (shown()) {
+        status = result.status === 'answered' ? t.answerSaved :
+          result.status === 'failed' ? t.turnFailed : t.turnInterrupted;
       }
-      status = result.status === 'answered' ? t.answerSaved :
-        result.status === 'failed' ? t.turnFailed : t.turnInterrupted;
-      if (currentId) {
-        try { history = await backend.history(currentId); localTurn = null; }
+      if (chat.id && shown()) {
+        try { chat.history = await backend.history(chat.id); chat.localTurn = null; }
         catch { /* Keep the local outcome until manual refresh. */ }
       }
     } catch (error) {
-      if (localTurn) { localTurn.status = 'failed'; localTurn.answer = errorText(error); }
-      status = t.sendFailed;
+      if (chat.localTurn) { chat.localTurn.status = 'failed'; chat.localTurn.answer = errorText(error); }
+      if (shown()) status = t.sendFailed;
     } finally {
-      busy = false;
-      if (closed) return;
-      if (input) input.disabled = false;
-      renderMenu(); renderChat(); renderStatus();
-      if (input) doc.giveFocusTo(input);
+      chat.sending = false;
+      sending.delete(chat);
+      if (!closed) {
+        renderMenu();
+        if (chat === view) {
+          if (input) input.disabled = false;
+          renderChat(); renderStatus();
+          if (input) doc.giveFocusTo(input);
+        }
+      }
     }
   }
 
